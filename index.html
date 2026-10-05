@@ -79,7 +79,48 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
 .fnode.dead .halo{stroke:var(--red);opacity:.8}
 .fnode.warn circle{stroke:var(--amber)}
 .fnode.warn .halo{stroke:var(--amber)}
-.cross{stroke:var(--red);stroke-width:2}
+.cross{stroke:var(--red);stroke-width:2;display:none}
+.fnode.dead .cross{display:block}
+
+/* 六场实验切换 */
+.scenetabs{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;padding:10px 13px;border-bottom:1px solid var(--line)}
+.scenetabs button{font-family:var(--mono);font-size:10px;color:var(--ink2);border:1px solid var(--line);background:rgba(20,28,28,.5);
+ padding:8px 3px;border-radius:7px;cursor:pointer;line-height:1.35;transition:.18s}
+.scenetabs button b{display:block;font-size:12.5px;margin-bottom:2px}
+.scenetabs button:hover{border-color:var(--teal-d);color:var(--ink)}
+.scenetabs button.on{color:var(--teal);border-color:var(--teal);background:rgba(45,212,191,.1)}
+/* 节点状态：扩张 / 外迁移除 / 病态；平滑过渡 */
+.fnode circle{transition:fill .5s,stroke .5s}
+.fnode text{transition:fill .5s}
+.fnode.grow .halo{stroke:#34d399;opacity:.95}
+.fnode.grow circle{stroke:#34d399}
+.fnode.grow text{fill:#6ee7b7}
+.fnode.gone circle{fill:#171d1c;stroke:#586863;stroke-dasharray:3 3}
+.fnode.gone .halo{stroke:#586863;opacity:.45}
+.fnode.gone text{fill:#586863;text-decoration:line-through}
+.fnode.sick circle{stroke:#9a7638}
+.fnode.sick .halo{stroke:#9a7638;opacity:.55}
+.pulsering{display:none;fill:none;stroke:#34d399;stroke-width:1.6;transform-box:fill-box;transform-origin:center;animation:pulseRing 1.9s ease-out infinite}
+.fnode.grow .pulsering{display:block}
+@keyframes pulseRing{0%{opacity:.85;transform:scale(.45)}100%{opacity:0;transform:scale(2.4)}}
+/* 指标仪表 */
+.stagemetrics{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border-top:1px solid var(--line)}
+.metric{background:var(--panel,#0d1312);padding:11px 16px}
+.metric .ml{font-size:11px;color:var(--ink2);font-weight:500}
+.metric .mv{font-family:var(--mono);font-size:25px;font-weight:800;line-height:1.15;margin-top:3px;transition:color .4s}
+.metric .mv.up{color:#34d399!important}.metric .mv.dn{color:var(--red)!important}
+.metric .md{font-size:10px;color:var(--ink2);margin-top:2px;font-family:var(--mono)}
+/* 播放控制 */
+.stagectl{display:flex;align-items:center;gap:12px;padding:11px 14px;border-top:1px solid var(--line)}
+.ctlbtn{font-family:var(--mono);font-size:11px;color:var(--ink);border:1px solid var(--teal-d);background:rgba(45,212,191,.1);
+ padding:7px 14px;border-radius:7px;cursor:pointer;font-weight:700}
+.ctlbtn.ghost{color:var(--ink2);border-color:var(--line);background:rgba(20,28,28,.5)}
+.monthLbl{font-family:var(--mono);font-size:12.5px;color:var(--teal);min-width:66px;font-weight:700}
+.stagectl input[type=range]{flex:1;-webkit-appearance:none;appearance:none;height:4px;background:rgba(255,255,255,.13);border-radius:3px;outline:none}
+.stagectl input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--teal);
+ border:2px solid #062b27;box-shadow:0 0 0 3px rgba(45,212,191,.18);cursor:pointer}
+.stagectl input[type=range]::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:var(--teal);border:none;cursor:pointer}
+.scenetitle{font-size:11px;color:var(--ink2);max-width:230px;line-height:1.4;text-align:right}
 
 /* 漫画对话框 */
 .speech{position:absolute;background:var(--paper);color:var(--paper-ink);border:2px solid var(--paper-ink);
@@ -268,36 +309,26 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
    <div class="panel-h">
     <span class="t">风洞舞台</span><span class="tag">SIMULATION</span>
     <div class="right">
-     <button class="mini on">网络结构</button><button class="mini">小圈子</button><button class="mini">重播</button>
+     <button class="mini" id="autoReplay">六场连播：关</button>
     </div>
    </div>
+   <div class="scenetabs" id="scenetabs"></div>
    <div class="stage" id="stage"></div>
+   <div class="stagemetrics" id="stagemetrics"></div>
+   <div class="stagectl">
+    <button class="ctlbtn" id="playBtn">播放</button>
+    <button class="ctlbtn ghost" id="resetBtn">重置</button>
+    <span class="monthLbl" id="monthLbl">第 0 月</span>
+    <input type="range" id="timeScrub" min="0" max="20" value="0" step="0.1">
+    <span class="scenetitle" id="sceneTitle"></span>
+   </div>
   </div>
 
-  <!-- 右栏：人话结论 -->
+  <!-- 右栏：本场景人话结论（随实验变化） -->
   <div class="panel side">
-   <div class="panel-h"><span class="t">体检结论 · 说人话</span></div>
-   <div class="verdict">
-    <div class="h"><span class="ic t">柱</span>谁是这张网的顶梁柱</div>
-    <div class="big v-teal">TCL 华星</div>
-    <div class="sub">它一搬走，整张网会散——但它不是唯一的关键。</div>
-   </div>
-   <div class="verdict">
-    <div class="h"><span class="ic a">喉</span>谁卡着上下游的咽喉</div>
-    <div class="big v-amber">电力保障 · 桥接配套</div>
-    <div class="sub">平时最不起眼，一旦停摆全场窒息。</div>
-   </div>
-   <div class="verdict">
-    <div class="h"><span class="ic r">险</span>谁看着稳、其实最先慢性死</div>
-    <div class="big v-red">一家小配套（第 16 个月）</div>
-    <div class="sub">硬撑 15 个月一切正常，第 16 个月突然没了。</div>
-    <div class="barv"><i style="width:82%;background:linear-gradient(90deg,var(--amber),var(--red))"></i></div>
-   </div>
-   <div class="verdict">
-    <div class="h"><span class="ic c">尾</span>最坏会怎样（跑 1000 次）</div>
-    <div class="big v-cyan">十家，活不到三家</div>
-    <div class="sub">这是极端情况下的推演分布，不是预言。</div>
-   </div>
+   <div class="panel-h"><span class="t">本场景 · 说人话</span>
+    <span class="tag" style="color:var(--ink2);border-color:var(--line)">随实验变化</span></div>
+   <div id="sideVerdicts"></div>
   </div>
  </div>
 
@@ -542,7 +573,6 @@ const EDGES=[
  ["bb","dz"],["bb","wp"],["bb","lq"],["sl","rj"],["zf","yw"],["zf","xw"],
  ["dl","hx"],["dl","yw"],["dl","sl"],["dl","gh"],["dl","dc"],["dl","wp"]
 ];
-const DEAD=new Set(["bb","cl","jc","jf","rj","sl"]),WARN=new Set(["dc"]);
 const byId=id=>ROLES.find(r=>r.id===id);
 
 /* ---------- 确定性 FR 布局 ---------- */
@@ -569,52 +599,205 @@ const VW=1000,VH=600,POS={};
  ns.forEach(z=>POS[z.id]={x:z.x,y:z.y});
 })();
 
-/* ---------- 渲染舞台 ---------- */
-function fill(id){const r=byId(id);
- if(DEAD.has(id))return "#2a1816";
- if(id==="hx")return "#14b8a6";if(id==="yw")return "#0e94b8";if(id==="xw")return "#c98a2e";
- if(id==="dl")return "#b8453c";if(WARN.has(id))return "#8a6a2a";
- return "#5d7d76";}
-function stroke(id){
- if(DEAD.has(id))return "#f06a5e";if(WARN.has(id))return "#f5b544";
- if(id==="hx")return "#2dd4bf";if(id==="yw")return "#38bdf8";if(id==="dl")return "#f06a5e";
- return "#7fa39c";}
-(function(){
- const stage=document.getElementById("stage");
- /* 风洞气流流线 */
- let flow="";
- for(let i=0;i<9;i++){const y=40+i*64+R()*18;
-  let d=`M -30 ${y}`;for(let x=0;x<=1040;x+=130){d+=` C ${x+40} ${y-22+R()*44}, ${x+90} ${y-22+R()*44}, ${x+130} ${y-14+R()*28}`}
-  const deadZone=DEAD.size;flow+=`<path class="fline" d="${d}" stroke="rgba(45,212,191,.32)"/>`;}
- /* 边 */
- let edges=EDGES.map(([u,v])=>{const a=POS[u],b=POS[v],dead=DEAD.has(u)&&DEAD.has(v);
-  return `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="${dead?"rgba(240,106,94,.25)":"rgba(150,190,180,.22)"}" stroke-width="1.1"/>`}).join("");
- /* 节点 */
- let nodes=ROLES.map(z=>{const p=POS[z.id],dead=DEAD.has(z.id),warn=WARN.has(z.id);
-  const cls="fnode"+(dead?" dead":"")+(warn?" warn":"");
-  let s=`<g class="${cls}" transform="translate(${p.x},${p.y})">
-   <circle class="halo" r="${z.r+5}" stroke="${stroke(z.id)}"/>
-   <circle r="${z.r}" fill="${fill(z.id)}" stroke="${stroke(z.id)}" stroke-width="1.4"/>`;
-  if(dead)s+=`<path class="cross" d="M ${-z.r*.6} ${-z.r*.6} L ${z.r*.6} ${z.r*.6} M ${z.r*.6} ${-z.r*.6} L ${-z.r*.6} ${z.r*.6}"/>`;
-  s+=`<text y="${z.r+14}">${z.name}</text></g>`;return s;}).join("");
- stage.innerHTML=
-  `<svg viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid meet">
-    <g>${flow}</g><g>${edges}</g><g>${nodes}</g>
-   </svg>`;
- /* 仪器读数 */
- const read=document.createElement("div");
- read.style.cssText="position:absolute;left:14px;top:12px;font-family:var(--mono);font-size:10.5px;color:var(--ink2);line-height:1.8";
- read.innerHTML=`风洞参数<br>气流速度 <span style="color:var(--teal)">M 0.62</span><br>压力 <span style="color:var(--teal)">0.41</span><br>已退出 <span style="color:var(--red)">6 / 20</span>`;
- stage.appendChild(read);
- /* 漫画对话框：指向 dc */
- const p=POS["dc"];
- const sp=document.createElement("div");
- const leftSide=p.x>560;
- sp.className="speech "+(leftSide?"bl":"br")+(WARN.has("dc")?"":" g");
- sp.style.cssText+=`top:${Math.max(2,p.y/600*100-26)}%;left:${leftSide?Math.max(1,p.x/10-23):p.x/10+2}%`;
- sp.innerHTML=`硬撑 <b>15 个月</b>，一切正常。<br>第 <b>16 个月</b>，没了。<span class="src">来源：链主外迁情景 · 模型设定，非现实企业</span>`;
- stage.appendChild(sp);
-})();
+/* ---------- 六场实验数据（状态月份：gone 外迁/移除 · dead 倒闭 · grow 扩张 · sick 病态） ---------- */
+const SCENES=[
+ {tab:"链主外迁",title:"实验一 · 链主外迁：时滞与钝刀子割肉",tmax:19,
+  gone:{hx:1},dead:{bb:2,cl:2,jc:5,jf:5,rj:10,sl:10},grow:{},sick:{dc:16},
+  metrics:[
+   {ml:"景气指数",t:[0,1,5,19],v:[.50,.32,.19,.16],c:"#2dd4bf"},
+   {ml:"风险水平",t:[0,1,5,19],v:[.20,.42,.50,.57],c:"#f06a5e"},
+   {ml:"存续率",t:[0,1,5,19],v:[1,.88,.63,.29],c:"#38bdf8"}],
+  speech:{at:16,target:"dc",html:`硬撑 <b>15 个月</b>，一切正常。<br>第 <b>16 个月</b>，没了。`,src:"链主外迁情景 · 模型设定，非现实企业"},
+  verdicts:[
+   {ic:"柱",cls:"t",h:"谁是这张网的顶梁柱",big:"TCL 华星",bigcls:"v-teal",sub:"它一搬走，整张网会散——但它不是唯一关键。"},
+   {ic:"喉",cls:"a",h:"谁卡着上下游的咽喉",big:"电力 · 桥接配套",bigcls:"v-amber",sub:"平时最不起眼，一旦停摆全场窒息。"},
+   {ic:"险",cls:"r",h:"谁看着稳、其实慢性死",big:"一家小配套（第16个月）",bigcls:"v-red",sub:"硬撑15个月一切正常，第16个月突然没了。",bar:82},
+   {ic:"尾",cls:"c",h:"最坏会怎样（跑1000次）",big:"十家，活不到三家",bigcls:"v-cyan",sub:"极端情况下的推演分布，不是预言。"}]
+ },
+ {tab:"晚救·技术",title:"实验二 · 晚救：危机扩散后再打技术突破",tmax:19,
+  gone:{hx:1},dead:{bb:2,cl:2,jc:5,jf:5,rj:10,sl:10},grow:{xw:11,yw:11,gh:11,wp:11,lq:12,dc:13},sick:{},
+  metrics:[
+   {ml:"存续率",t:[0,1,10,11,19],v:[1,.88,.35,.38,.42],c:"#38bdf8"},
+   {ml:"风险水平",t:[0,1,10,11,19],v:[.20,.42,.48,.46,.32],c:"#f06a5e"},
+   {ml:"协同度",t:[0,1,10,11,19],v:[.50,.45,.38,.46,.62],c:"#34d399"}],
+  speech:{at:12,target:"xw",g:1,html:`我以为无力回天。<br>它<b>居然救回来了</b>——晚到的技术突破，托住的是结构。`,src:"晚救情景 · 技术突破为模型设定"},
+  verdicts:[
+   {ic:"救",cls:"t",h:"晚到的技术突破",big:"存续 0.42",bigcls:"v-teal",sub:"比不救的0.29高，也比早救的0.38高。"},
+   {ic:"钉",cls:"a",h:"这一幕的钉子",big:"你救的是时间，模型救的是结构",bigcls:"v-amber",sub:"技术突破改变网络技术能级，协同更紧。"},
+   {ic:"戒",cls:"r",h:"不能误读",big:"不能据此说“晚救更好”",bigcls:"v-red",sub:"晚救用技术突破、早救用政策+订单，路径不同。"}]
+ },
+ {tab:"早救·政策",title:"实验三 · 早救：危机刚冒头就出手",tmax:18,
+  gone:{hx:1},dead:{bb:2,cl:2},grow:{},sick:{jc:6,jf:6,rj:8,sl:8,dc:8},
+  metrics:[
+   {ml:"存续率",t:[0,1,3,6,18],v:[1,.88,.82,.72,.38],c:"#38bdf8"},
+   {ml:"风险水平",t:[0,1,3,6,18],v:[.20,.42,.38,.40,.44],c:"#f06a5e"},
+   {ml:"景气指数",t:[0,1,3,6,18],v:[.50,.32,.34,.33,.26],c:"#2dd4bf"}],
+  speech:{at:9,target:"jc",g:1,html:`更早出手，存续 <b>0.38</b>。<br>人保住了一些，结构却没变好。`,src:"早救情景 · 政策+订单为模型设定"},
+  verdicts:[
+   {ic:"早",cls:"t",h:"教科书式提前干预",big:"存续 0.38",bigcls:"v-teal",sub:"第3月政策、第6月订单，全下在扩散前。"},
+   {ic:"反",cls:"r",h:"反不如晚救",big:"0.38 ＜ 晚救 0.42",bigcls:"v-red",sub:"政策+订单在需求端托，能续命、不改结构。"},
+   {ic:"问",cls:"a",h:"真正该问的",big:"你打进了网络的哪个位置？",bigcls:"v-amber",sub:"干预效果不只看什么时候出手。"}]
+ },
+ {tab:"芯片断供",title:"实验四 · 芯片断供：残酷的同业洗牌",tmax:20,
+  gone:{},dead:{ab:2,jf:3,dz:4},grow:{hx:2,xw:3,yw:3,lq:4},sick:{},
+  metrics:[
+   {ml:"风险水平",t:[0,1,20],v:[.20,.38,.51],c:"#f06a5e"},
+   {ml:"存续率",t:[0,1,20],v:[1,1,.38],c:"#38bdf8"},
+   {ml:"协同度",t:[0,1,20],v:[.50,.48,.52],c:"#34d399"}],
+  speech:{at:5,target:"yw",g:1,html:`断供没让大家一起完。<br>同质化的退，<b>有核心技术的吃到份额</b>。`,src:"芯片断供情景 · 模型设定"},
+  verdicts:[
+   {ic:"洗",cls:"t",h:"一次危机，一次洗牌",big:"能源电子 +18.7%",bigcls:"v-teal",sub:"华星、西威、亿纬、龙旗在废墟上放量。"},
+   {ic:"退",cls:"r",h:"谁退链",big:"艾比森 · 聚飞 · TCL电子",bigcls:"v-red",sub:"同质化、外购芯片、拼价格、没护城河。"},
+   {ic:"得",cls:"a",h:"死掉的是什么",big:"不长骨头的同质化玩家",bigcls:"v-amber",sub:"冲击不只破坏，还重新分配位置。"}]
+ },
+ {tab:"三波暴击",title:"实验五 · 三波暴击：快速出清与反常识存续",tmax:18,
+  gone:{hx:6,yw:9},dead:{bb:6,cl:6,ab:6,jc:7,jf:7,rj:8,sl:8,ljq:8,pcb:8,lm:9,dc:9},grow:{gh:10,wp:10,xw:10},sick:{},
+  metrics:[
+   {ml:"风险水平",t:[0,1,6,9,12,18],v:[.20,.35,.52,.55,.42,.39],c:"#f06a5e"},
+   {ml:"协同度",t:[0,1,6,9,18],v:[.50,.46,.40,.42,.57],c:"#34d399"},
+   {ml:"存续率",t:[0,1,6,9,18],v:[1,.9,.6,.45,.42],c:"#38bdf8"}],
+  speech:{at:11,target:"gh",g:1,html:`三波连击，风险 <b>0.39</b>。<br>反而比单次外迁的 <b>0.57</b> 还低。`,src:"三波暴击情景 · 模型设定"},
+  verdicts:[
+   {ic:"反",cls:"t",h:"更狠，却没更坏",big:"风险 0.39 ＜ 0.57",bigcls:"v-teal",sub:"暴击逼系统快速出清僵尸节点。"},
+   {ic:"留",cls:"a",h:"最后留下谁",big:"光弘 · TCL王牌 · 德赛西威",bigcls:"v-amber",sub:"最核心最韧，连接变得干净、紧。"},
+   {ic:"磨",cls:"r",h:"反常识启发",big:"钝刀子，比暴击更磨人",bigcls:"v-red",sub:"半死不活吊着，占资源拖累整张网。"},
+   {ic:"戒",cls:"c",h:"紧跟一句边界",big:"现实代价没算出量级",bigcls:"v-cyan",sub:"暴击的就业、社会代价，模型远未覆盖。"}]
+ },
+ {tab:"移除电力",title:"实验六 · 移除电力：活着 ≠ 健康（全片高潮）",tmax:20,
+  gone:{dl:1},dead:{},grow:{},
+  sick:{hx:2,yw:2,xw:2,dz:3,wp:3,lq:3,gh:3,dc:3,jf:3,ab:3,lm:3,cl:3,ljq:3,pcb:3,bb:3,jc:3,rj:3,sl:3,zf:3},
+  metrics:[
+   {ml:"景气指数",t:[0,1,20],v:[.50,.30,.16],c:"#2dd4bf"},
+   {ml:"信心指数",t:[0,1,20],v:[.20,-.10,-.41],c:"#f06a5e"},
+   {ml:"存续率",t:[0,1,20],v:[1,.80,.54],c:"#38bdf8"}],
+  speech:{at:13,target:"hx",g:1,html:`企业<b>全活着</b>，景气却全场最低。<br><b>活着，不等于健康。</b>`,src:"移除电力情景 · 模型设定，非现实"},
+  verdicts:[
+   {ic:"悖",cls:"t",h:"最荒唐的对照",big:"存续0.54最高 · 景气0.16最低",bigcls:"v-teal",sub:"招牌都在、门开着，但开工不足、人人憋屈。"},
+   {ic:"维",cls:"a",h:"不同节点，打不同维度",big:"链主管骨架 · 电力管喘气",bigcls:"v-amber",sub:"芯片断供最伤协同结构。"},
+   {ic:"问",cls:"r",h:"假问题与真问题",big:"“你说的重要，对哪个指标？”",bigcls:"v-red",sub:"没有谁最重要，只有谁控制哪个维度。"}]
+ }
+];
+
+/* ---------- 状态与插值 ---------- */
+function stateAt(s,id,t){
+ if(s.gone[id]!=null&&s.gone[id]<=t)return"gone";
+ if(s.dead[id]!=null&&s.dead[id]<=t)return"dead";
+ if(s.grow[id]!=null&&s.grow[id]<=t)return"grow";
+ if(s.sick[id]!=null&&s.sick[id]<=t)return"sick";
+ return"normal";}
+function interp(m,t){const T=m.t,V=m.v;
+ if(t<=T[0])return V[0];if(t>=T[T.length-1])return V[V.length-1];
+ for(let i=0;i<T.length-1;i++)if(t>=T[i]&&t<=T[i+1]){
+  const r=(t-T[i])/(T[i+1]-T[i]),e=r*r*(3-2*r);return V[i]+(V[i+1]-V[i])*e;}
+ return V[V.length-1];}
+const NORMAL_FILL={hx:["#14b8a6","#2dd4bf"],yw:["#0e94b8","#38bdf8"],xw:["#c98a2e","#f5b544"],dl:["#b8453c","#f06a5e"]};
+
+/* ---------- 搭建舞台 DOM ---------- */
+const stage=document.getElementById("stage");
+let flow="";
+for(let i=0;i<9;i++){const y=40+i*64+R()*18;
+ let d=`M -30 ${y}`;for(let x=0;x<=1040;x+=130){d+=` C ${x+40} ${y-22+R()*44}, ${x+90} ${y-22+R()*44}, ${x+130} ${y-14+R()*28}`}
+ flow+=`<path class="fline" d="${d}" stroke="rgba(45,212,191,.28)"/>`;}
+let elines=EDGES.map(([u,v])=>{const a=POS[u],b=POS[v];
+ return `<line data-u="${u}" data-v="${v}" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}"
+  stroke="rgba(150,190,180,.22)" stroke-width="1.1" style="transition:stroke .5s"/>`}).join("");
+let enodes=ROLES.map(z=>{const p=POS[z.id],nf=NORMAL_FILL[z.id]||["#3d5650","#7fa39c"];
+ return `<g class="fnode" data-id="${z.id}" transform="translate(${p.x},${p.y})">
+  <circle class="pulsering" r="${z.r+3}"/>
+  <circle class="halo" r="${z.r+5}" stroke="${nf[1]}" fill="none" stroke-width="1.5" opacity=".55" style="transition:stroke .5s"/>
+  <circle r="${z.r}" fill="${nf[0]}" stroke="${nf[1]}" stroke-width="1.4"/>
+  <path class="cross" d="M ${-z.r*.6} ${-z.r*.6} L ${z.r*.6} ${z.r*.6} M ${z.r*.6} ${-z.r*.6} L ${-z.r*.6} ${z.r*.6}"/>
+  <text y="${z.r+14}">${z.name}</text></g>`;}).join("");
+stage.innerHTML=`<svg viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid meet">
+  <g>${flow}</g><g id="eledge">${elines}</g><g id="enodeg">${enodes}</g></svg>`;
+const read=document.createElement("div");
+read.style.cssText="position:absolute;left:14px;top:12px;font-family:var(--mono);font-size:10.5px;color:var(--ink2);line-height:1.85";
+stage.appendChild(read);
+const sp=document.createElement("div");sp.style.display="none";stage.appendChild(sp);
+
+/* ---------- 底部仪表骨架 ---------- */
+const sm=document.getElementById("stagemetrics");let metricEls=[];
+for(let i=0;i<3;i++){const d=document.createElement("div");d.className="metric";
+ d.innerHTML=`<div class="ml"></div><div class="mv"></div><div class="md"></div>`;
+ sm.appendChild(d);metricEls.push({ml:d.querySelector(".ml"),mv:d.querySelector(".mv"),md:d.querySelector(".md")});}
+
+/* ---------- 右栏结论 ---------- */
+function renderVerdicts(s){
+ document.getElementById("sideVerdicts").innerHTML=s.verdicts.map(v=>`
+  <div class="verdict"><div class="h"><span class="ic ${v.cls}">${v.ic}</span>${v.h}</div>
+   <div class="big ${v.bigcls}">${v.big}</div><div class="sub">${v.sub}</div>
+   ${v.bar?`<div class="barv"><i style="width:${v.bar}%;background:linear-gradient(90deg,var(--amber),var(--red))"></i></div>`:""}
+  </div>`).join("");}
+
+/* ---------- 渲染一帧 ---------- */
+let cur=0;
+function renderFrame(t){
+ const s=SCENES[cur];
+ stage.querySelectorAll(".fnode").forEach(g=>{
+  const stt=stateAt(s,g.getAttribute("data-id"),t);
+  g.setAttribute("class","fnode"+(stt==="normal"?"":" "+stt));});
+ stage.querySelectorAll("#eledge line").forEach(l=>{
+  const su=stateAt(s,l.getAttribute("data-u"),t),sv=stateAt(s,l.getAttribute("data-v"),t);
+  let col="rgba(150,190,180,.20)";
+  if(su==="gone"||sv==="gone")col="rgba(120,135,130,.12)";
+  else if(su==="dead"||sv==="dead")col="rgba(240,106,94,.30)";
+  else if(su==="grow"&&sv==="grow")col="rgba(52,211,153,.45)";
+  l.style.stroke=col;});
+ s.metrics.forEach((m,i)=>{const val=interp(m,t),diff=val-m.v[0],me=metricEls[i];
+  me.ml.textContent=m.ml;me.ml.style.color=m.c;
+  me.mv.textContent=(val<0?"−":"")+Math.abs(val).toFixed(2);me.mv.style.color=m.c;
+  me.md.textContent=(diff>=0?"▲ +":"▼ ")+Math.abs(diff).toFixed(2);me.md.style.color=diff>=0?"#34d399":"#f06a5e";});
+ const goneN=Object.keys(s.gone).filter(k=>s.gone[k]<=t).length;
+ const deadN=Object.keys(s.dead).filter(k=>s.dead[k]<=t).length;
+ read.innerHTML=`风洞参数 · ${s.tab}<br>气流速度 <span style="color:var(--teal)">M ${(0.5+t*.02).toFixed(2)}</span>
+  <br>压力 <span style="color:var(--teal)">${(0.3+t*.015).toFixed(2)}</span>
+  <br>退出/外迁 <span style="color:var(--red)">${deadN+goneN} / 20</span>`;
+ document.getElementById("monthLbl").textContent="第 "+Math.round(t)+" 月";
+ document.getElementById("timeScrub").value=t;
+ if(s.speech&&t>=s.speech.at){const pp=POS[s.speech.target],left=pp.x>540;
+  sp.className="speech "+(left?"br":"bl")+(s.speech.g?" g":"");
+  sp.style.cssText=`display:block;top:${Math.max(2,pp.y/600*100-24)}%;left:${left?Math.max(1,pp.x/10-24):pp.x/10+2}%`;
+  sp.innerHTML=s.speech.html+`<span class="src">来源：${s.speech.src}</span>`;
+ }else sp.style.display="none";
+}
+
+/* ---------- 实验 tab ---------- */
+const tabs=document.getElementById("scenetabs");
+SCENES.forEach((s,i)=>{const b=document.createElement("button");
+ b.innerHTML=`<b>${"①②③④⑤⑥"[i]}</b>${s.tab}`;
+ b.onclick=()=>selectScene(i,true);tabs.appendChild(b);});
+let t=0,playing=false,raf=null,autoChain=false,lastTs=0;
+const playBtn=document.getElementById("playBtn"),ar=document.getElementById("autoReplay");
+function selectScene(i,userClick){
+ cur=i;t=0;
+ document.getElementById("sceneTitle").textContent=SCENES[i].title;
+ document.getElementById("timeScrub").max=SCENES[i].tmax;
+ tabs.querySelectorAll("button").forEach((b,j)=>b.classList.toggle("on",j===i));
+ renderVerdicts(SCENES[i]);renderFrame(0);
+ if(userClick&&playing)play();
+}
+function frame(ts){
+ if(!playing)return;
+ if(!lastTs)lastTs=ts;
+ const dt=(ts-lastTs)/1000;lastTs=ts;
+ t+=dt*SCENES[cur].tmax/9;
+ if(t>=SCENES[cur].tmax){t=SCENES[cur].tmax;renderFrame(t);stop();
+  if(autoChain){if(cur<SCENES.length-1)setTimeout(()=>{selectScene(cur+1,false);play();},700);
+   else{autoChain=false;ar.textContent="六场连播：关";ar.classList.remove("on");}}
+  return;}
+ renderFrame(t);raf=requestAnimationFrame(frame);
+}
+function play(){if(raf)cancelAnimationFrame(raf);playing=true;lastTs=0;
+ playBtn.textContent="暂停";raf=requestAnimationFrame(frame);}
+function stop(){playing=false;playBtn.textContent="播放";if(raf)cancelAnimationFrame(raf);}
+playBtn.onclick=()=>playing?stop():play();
+document.getElementById("resetBtn").onclick=()=>{stop();t=0;renderFrame(0);};
+document.getElementById("timeScrub").addEventListener("input",e=>{stop();t=parseFloat(e.target.value);renderFrame(t);});
+ar.onclick=function(){autoChain=!autoChain;
+ this.textContent="六场连播："+(autoChain?"开":"关");
+ this.classList.toggle("on",autoChain);
+ if(autoChain&&!playing)play();};
+selectScene(0,false);
 
 /* ---------- 完整网络全景（健康态·FR） ---------- */
 (function(){
