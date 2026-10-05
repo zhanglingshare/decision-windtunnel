@@ -210,6 +210,33 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
 .netctrl{position:absolute;top:12px;right:14px;display:flex;gap:7px;z-index:5}
 .minibtn{font-family:var(--mono);font-size:10.5px;color:var(--ink2);border:1px solid var(--line);background:rgba(10,15,15,.75);padding:5px 10px;border-radius:6px;cursor:pointer}
 .minibtn:hover,.minibtn.on{color:var(--teal);border-color:var(--teal-d)}
+
+/* ===== 00 重建世界（真建构开场） ===== */
+.buildpanel{border:1px solid var(--line);border-radius:12px;background:linear-gradient(180deg,rgba(20,27,27,.7),rgba(12,17,17,.85));overflow:hidden;margin-bottom:15px}
+.bp-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line)}
+.bp-tag{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;color:var(--teal);border:1px solid var(--teal-d);background:rgba(45,212,191,.08);border-radius:6px;padding:5px 11px}
+.bp-counters{display:flex;gap:9px}
+.bpc{font-family:var(--mono);font-size:11px;color:var(--ink2);border:1px solid var(--line);background:rgba(10,15,15,.7);border-radius:999px;padding:6px 13px}
+.bpc b{color:var(--teal);font-size:13px}
+.bp-stage{position:relative;height:600px;background:radial-gradient(circle at 50% 42%,#12302d,#0a1716)}
+.bp-stage svg{width:100%;height:100%;display:block}
+.wnode{cursor:pointer}
+.wnode:hover circle:nth-child(3){filter:brightness(1.3)}
+.wnode text{pointer-events:none}
+.bp-log{position:absolute;left:14px;bottom:14px;width:232px;background:rgba(8,18,17,.78);border:1px solid #264742;border-radius:10px;padding:10px 13px}
+.bp-lt{font-size:11px;font-weight:800;color:var(--teal);letter-spacing:.1em;margin-bottom:6px}
+.bp-lg{font-size:10.5px;color:var(--ink2);opacity:0;transform:translateY(4px);transition:.3s;margin:4px 0}
+.bp-lg.on{opacity:1;transform:none;color:var(--ink)}
+.bp-centerhint{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-family:var(--mono);font-size:12px;color:var(--ink3);letter-spacing:.08em;transition:opacity .4s;pointer-events:none}
+.bp-centerhint.hide{opacity:0}
+.bp-readout{display:flex;align-items:center;gap:22px;flex-wrap:wrap;padding:0 16px;max-height:0;opacity:0;overflow:hidden;transition:.5s}
+.bp-readout.show{opacity:1;max-height:80px;padding:12px 16px;border-top:1px solid var(--line)}
+.bp-readout span{font-family:var(--mono);font-size:11.5px;color:var(--ink2)}
+.bp-readout b{color:var(--ink);font-size:15px}
+.bp-readout .bp-go{margin-left:auto;color:var(--teal)}
+.bp-ctrl{display:flex;align-items:center;gap:10px;padding:12px 16px;border-top:1px solid var(--line)}
+.bpbar{flex:1;height:7px;background:#0c1312;border:1px solid var(--line);border-radius:99px;overflow:hidden}
+.bpbar i{display:block;height:100%;width:0;background:var(--teal);transition:width .1s}
 .addform{display:grid;grid-template-columns:repeat(4,1fr) auto;gap:14px;align-items:end;padding:4px 2px}
 .fld{display:flex;flex-direction:column;gap:6px}
 .fld label{font-size:11.5px;color:var(--ink2)}
@@ -270,6 +297,40 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
   <div class="step on"><span class="no">03</span>体检诊断</div><span class="bar"></span>
   <div class="step"><span class="no">04</span>风洞压测</div><span class="bar"></span>
   <div class="step"><span class="no">05</span>开处方</div>
+ </div>
+
+ <!-- ===== 00 重建世界（真建构开场） ===== -->
+ <div class="sec-h"><span class="n">00</span><span class="t">重建世界：看着这张网，在眼前一点点长出来</span>
+  <span class="s">喂入 2025 公开统计与企业名录，不写剧本、只给规则，节点和关系自己生长</span></div>
+ <div class="buildpanel">
+  <div class="bp-head">
+   <span class="bp-tag">世界构建 · WORLD</span>
+   <div class="bp-counters">
+    <span class="bpc">主体 <b id="w_cntN">0</b> / 20</span>
+    <span class="bpc">关系 <b id="w_cntE">0</b> / 36</span>
+   </div>
+  </div>
+  <div class="bp-stage">
+   <svg id="wnet" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid meet"></svg>
+   <div class="bp-centerhint" id="w_hint">点击下方「开始重建」</div>
+   <div class="bp-log">
+    <div class="bp-lt">构建日志</div>
+    <div class="bp-lg" data-i="0">▸ 解析世界资料（统计公报 · 企业名录）</div>
+    <div class="bp-lg" data-i="1">▸ 抽取 20 个主体</div>
+    <div class="bp-lg" data-i="2">▸ 生长 36 条关系</div>
+    <div class="bp-lg" data-i="3">✓ 世界构建完成</div>
+   </div>
+  </div>
+  <div class="bp-readout" id="w_readout">
+   <span><b>20</b> 主体</span><span><b>36</b> 关系</span><span><b>7</b> 类角色</span><span>密度 <b>0.19</b></span>
+   <span class="bp-go">网长好了，下面开始完整体检 ↓</span>
+  </div>
+  <div class="bp-ctrl">
+   <button class="ctlbtn" id="w_play">▶ 开始重建</button>
+   <button class="ctlbtn ghost" id="w_skip">跳过</button>
+   <button class="ctlbtn ghost" id="w_reset">重置</button>
+   <div class="bpbar"><i id="w_prog"></i></div>
+  </div>
  </div>
 
  <!-- ===== 01 完整网络全景 ===== -->
@@ -691,6 +752,85 @@ function interp(m,t){const T=m.t,V=m.v;
   const r=(t-T[i])/(T[i+1]-T[i]),e=r*r*(3-2*r);return V[i]+(V[i+1]-V[i])*e;}
  return V[V.length-1];}
 const NORMAL_FILL={hx:["#14b8a6","#2dd4bf"],yw:["#0e94b8","#38bdf8"],xw:["#c98a2e","#f5b544"],dl:["#b8453c","#f06a5e"]};
+
+/* ---------- 00 重建世界：真建构引擎（到点才创建 DOM，setInterval 不冻结） ---------- */
+(function(){
+ const NS="http://www.w3.org/2000/svg";
+ const wnet=document.getElementById("wnet");
+ const N_T0=.8,N_DT=.12;
+ const E_T0=N_T0+ROLES.length*N_DT+.5,E_DT=.08;
+ ROLES.forEach((z,i)=>z._wt=N_T0+i*N_DT);
+ EDGES.forEach((e,i)=>e._wet=E_T0+i*E_DT);
+ const T_END=E_T0+EDGES.length*E_DT+.9;
+ let W={t:0,timer:null,playing:false,done:false,nodes:{},edges:{}};
+ const fillOf=id=>(NORMAL_FILL[id]||["#3d5650","#7fa39c"]);
+ function mk(n,a){const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);return e;}
+ function spawn(t){
+  const cx=500,cy=300;let nn=0,ne=0;
+  ROLES.forEach(z=>{
+   if(t>=z._wt&&!W.nodes[z.id]){
+    const nf=fillOf(z.id),g=mk("g",{});g.classList.add("wnode");
+    g.appendChild(mk("circle",{r:z.r+6,fill:nf[1],opacity:.15}));
+    g.appendChild(mk("circle",{r:z.r+2.5,fill:"none",stroke:nf[1],"stroke-width":1.3,opacity:.5}));
+    g.appendChild(mk("circle",{r:z.r,fill:nf[0],stroke:nf[1],"stroke-width":1.3}));
+    const tx=mk("text",{"text-anchor":"middle",fill:"#d7e6e2","font-size":10,y:z.r+13});tx.textContent=z.name;g.appendChild(tx);
+    wnet.appendChild(g);W.nodes[z.id]=g;nn++;
+   }
+   const g=W.nodes[z.id];
+   if(g){const p=POS[z.id],k=Math.min(1,(t-z._wt)/.6),e=1-Math.pow(1-k,3);
+    g.setAttribute("transform",`translate(${cx+(p.x-cx)*(.05+.95*e)},${cy+(p.y-cy)*(.05+.95*e)}) scale(${.2+.8*e})`);
+    g.setAttribute("opacity",k);}
+  });
+  EDGES.forEach((ed,i)=>{
+   if(t>=ed._wet&&!W.edges[i]){
+    const a=POS[ed[0]],b=POS[ed[1]];
+    const ln=mk("line",{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:"#5f857c","stroke-width":1.1,
+     pathLength:1,"stroke-dasharray":1,"stroke-dashoffset":1,opacity:.55});
+    wnet.appendChild(ln);W.edges[i]=ln;ne++;
+   }
+   const ln=W.edges[i];
+   if(ln){const k=Math.min(1,(t-ed._wet)/.5);ln.setAttribute("stroke-dashoffset",1-k);}
+  });
+  if(nn)document.getElementById("w_cntN").textContent=Object.keys(W.nodes).length;
+  if(ne)document.getElementById("w_cntE").textContent=Object.keys(W.edges).length;
+  const L=document.querySelectorAll(".bp-lg");
+  if(t>=.2)L[0].classList.add("on");
+  if(t>=E_T0-.3)L[1].classList.add("on");
+  if(t>=E_T0)L[2].classList.add("on");
+  if(t>=T_END-.2)L[3].classList.add("on");
+  document.getElementById("w_prog").style.width=Math.min(100,t/T_END*100)+"%";
+ }
+ function start(){if(W.playing)return;W.playing=true;
+  document.getElementById("w_hint").classList.add("hide");
+  document.getElementById("w_play").textContent="❚❚ 暂停";
+  W.timer=setInterval(function(){W.t+=.016;spawn(W.t);if(W.t>=T_END)finish();},16);}
+ function stop(){if(W.timer){clearInterval(W.timer);W.timer=null;}W.playing=false;}
+ function finish(){stop();W.done=true;
+  document.getElementById("w_play").textContent="✓ 已完成";
+  document.getElementById("w_prog").style.width="100%";
+  document.getElementById("w_cntN").textContent=ROLES.length;
+  document.getElementById("w_cntE").textContent=EDGES.length;
+  document.getElementById("w_readout").classList.add("show");}
+ function reset(autoplay){
+  stop();
+  W={t:0,timer:null,playing:false,done:false,nodes:{},edges:{}};
+  while(wnet.firstChild)wnet.removeChild(wnet.firstChild);
+  document.getElementById("w_cntN").textContent="0";
+  document.getElementById("w_cntE").textContent="0";
+  document.getElementById("w_prog").style.width="0";
+  document.getElementById("w_play").textContent="▶ 开始重建";
+  document.getElementById("w_hint").classList.remove("hide");
+  document.getElementById("w_readout").classList.remove("show");
+  document.querySelectorAll(".bp-lg").forEach(function(l){l.classList.remove("on");});
+  if(autoplay)start();
+ }
+ function skip(){stop();W.t=T_END;spawn(T_END);finish();}
+ document.getElementById("w_play").onclick=function(){
+  if(W.playing){stop();document.getElementById("w_play").textContent="▶ 继续";}
+  else if(W.done)reset(true);else start();};
+ document.getElementById("w_skip").onclick=skip;
+ document.getElementById("w_reset").onclick=function(){reset(false);};
+})();
 
 /* ---------- 搭建舞台 DOM ---------- */
 const stage=document.getElementById("stage");
