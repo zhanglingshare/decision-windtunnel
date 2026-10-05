@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>产业决策风洞 · AI 决策体检</title>
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=Noto+Serif+SC:wght@600;700;900&display=swap">
+<style>
+:root{
+ --bg:#0a0e0d; --panel:#10151a; --panel2:#0d1211;
+ --line:rgba(120,170,160,.14); --line2:rgba(120,170,160,.07);
+ --teal:#2dd4bf; --teal-d:#0f766e; --cyan:#38bdf8; --cyan-d:#0891b2;
+ --amber:#f5b544; --amber-d:#d97706; --red:#f06a5e; --red-d:#dc2626;
+ --ink:#e7edeb; --ink2:#93a59f; --ink3:#5f716c;
+ --paper:#f4f1e8; --paper-ink:#171b1a;
+ --mono:ui-monospace,"JetBrains Mono","Cascadia Code",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--ink);font-family:"Noto Sans SC",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+body{
+ background:
+  radial-gradient(1100px 600px at 22% -8%,rgba(20,120,110,.16),transparent 60%),
+  radial-gradient(900px 520px at 100% 110%,rgba(8,110,140,.12),transparent 55%),
+  var(--bg);
+ min-width:1240px;
+}
+/* 工程网格 + 噪点 */
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+ background-image:linear-gradient(var(--line2) 1px,transparent 1px),linear-gradient(90deg,var(--line2) 1px,transparent 1px);
+ background-size:44px 44px;mask-image:radial-gradient(120% 120% at 50% 0%,#000 55%,transparent 100%)}
+.grain{position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.05;mix-blend-mode:overlay}
+.wrap{position:relative;z-index:2;max-width:1400px;margin:0 auto;padding:18px 26px 40px}
+
+/* HUD 顶栏 */
+.hud{display:flex;align-items:center;gap:16px;padding-bottom:16px;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:11px;font-weight:900;font-size:19px;letter-spacing:.5px}
+.brand .logo{width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--teal-d);border-radius:8px;
+ background:radial-gradient(circle at 50% 40%,rgba(45,212,191,.25),transparent 70%);color:var(--teal)}
+.hud-right{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--ink2)}
+.chip{display:flex;align-items:center;gap:7px;padding:7px 12px;border:1px solid var(--line);border-radius:7px;background:rgba(20,28,28,.5)}
+.chip b{color:var(--ink);font-weight:700}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--teal);box-shadow:0 0 8px var(--teal);animation:pulse 2.2s infinite}
+@keyframes pulse{50%{opacity:.35}}
+.btn{font-family:inherit;font-size:13px;font-weight:700;color:#06231f;background:linear-gradient(180deg,#3fe0cb,#19b3a0);
+ border:1px solid #5cf0db;border-radius:8px;padding:9px 16px;cursor:pointer;box-shadow:0 4px 16px rgba(20,180,160,.25)}
+.btn.ghost{background:rgba(20,28,28,.5);color:var(--ink);border:1px solid var(--line);box-shadow:none}
+
+/* 步骤条 */
+.flow{display:flex;align-items:center;gap:0;margin:20px 0 22px}
+.step{display:flex;align-items:center;gap:9px;font-size:13px;color:var(--ink3);font-weight:500}
+.step .no{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-family:var(--mono);
+ font-size:12px;border:1px solid var(--line);background:var(--panel2)}
+.step.on{color:var(--ink)}.step.on .no{color:#06231f;background:var(--teal);border-color:var(--teal);font-weight:700}
+.step.done .no{color:var(--teal);border-color:var(--teal-d)}
+.flow .bar{flex:0 0 46px;height:1px;background:var(--line);margin:0 9px}
+
+/* 主布局 */
+.grid{display:grid;grid-template-columns:1fr 372px;gap:18px;align-items:stretch}
+.panel{border:1px solid var(--line);border-radius:12px;background:linear-gradient(180deg,rgba(22,30,30,.72),rgba(12,17,17,.82));
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.03),0 10px 30px rgba(0,0,0,.35);overflow:hidden}
+.panel-h{display:flex;align-items:center;gap:10px;padding:13px 16px;border-bottom:1px solid var(--line)}
+.panel-h .t{font-weight:700;font-size:14px}
+.panel-h .tag{font-family:var(--mono);font-size:10.5px;color:var(--teal);border:1px solid var(--teal-d);padding:2px 7px;border-radius:5px}
+.panel-h .right{margin-left:auto;display:flex;gap:7px}
+.mini{font-family:var(--mono);font-size:10.5px;color:var(--ink2);border:1px solid var(--line);background:rgba(20,28,28,.5);
+ padding:4px 9px;border-radius:6px;cursor:pointer}
+.mini.on{color:var(--teal);border-color:var(--teal-d)}
+
+/* 风洞舞台 */
+.stage{position:relative;height:600px}
+.stage svg{position:absolute;inset:0;width:100%;height:100%}
+.fline{fill:none;stroke-width:1.4;stroke-linecap:round;stroke-dasharray:10 14;animation:blow 1.1s linear infinite}
+@keyframes blow{to{stroke-dashoffset:-24}}
+.fnode{cursor:pointer}
+.fnode text{font-size:11px;fill:var(--ink);text-anchor:middle;font-weight:600}
+.fnode .halo{fill:none;stroke-width:1.5;opacity:.55}
+.fnode.dead circle{fill:#241514;stroke:var(--red)}
+.fnode.dead text{fill:var(--red);text-decoration:line-through}
+.fnode.dead .halo{stroke:var(--red);opacity:.8}
+.fnode.warn circle{stroke:var(--amber)}
+.fnode.warn .halo{stroke:var(--amber)}
+.cross{stroke:var(--red);stroke-width:2}
+
+/* 漫画对话框 */
+.speech{position:absolute;background:var(--paper);color:var(--paper-ink);border:2px solid var(--paper-ink);
+ border-radius:13px;padding:9px 13px;font-size:12.5px;font-weight:700;line-height:1.45;
+ box-shadow:4px 5px 0 rgba(0,0,0,.35);max-width:226px}
+.speech b{font-family:var(--mono);color:var(--red-d)}
+.speech.g b{color:var(--teal-d)}
+.speech::after{content:"";position:absolute;width:0;height:0;border:8px solid transparent}
+.speech.bl::after{left:-14px;top:22px;border-right-color:var(--paper-ink)}
+.speech.br::after{right:-14px;top:22px;border-left-color:var(--paper-ink)}
+.speech .src{display:block;margin-top:5px;font-size:9.5px;font-weight:400;color:#6a6f68}
+
+/* 右栏结论卡 */
+.side{display:flex;flex-direction:column}
+.verdict{padding:15px 16px;border-bottom:1px solid var(--line)}
+.verdict:last-child{border-bottom:0}
+.verdict .h{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink2);margin-bottom:7px;font-weight:500}
+.verdict .h .ic{width:19px;height:19px;border-radius:6px;display:grid;place-items:center;font-size:11px;font-weight:900}
+.verdict .big{font-size:16.5px;font-weight:900;line-height:1.4}
+.verdict .sub{font-size:12px;color:var(--ink2);margin-top:5px;line-height:1.5}
+.v-teal{color:var(--teal)}.v-amber{color:var(--amber)}.v-red{color:var(--red)}.v-cyan{color:var(--cyan)}
+.ic.t{background:rgba(45,212,191,.16);color:var(--teal)}
+.ic.a{background:rgba(245,181,68,.16);color:var(--amber)}
+.ic.r{background:rgba(240,106,94,.16);color:var(--red)}
+.ic.c{background:rgba(56,189,248,.16);color:var(--cyan)}
+.barv{height:7px;border-radius:4px;background:rgba(255,255,255,.07);margin-top:9px;overflow:hidden}
+.barv i{display:block;height:100%;border-radius:4px}
+
+/* 底部动作 */
+.foot{display:flex;gap:12px;margin-top:18px}
+.foot .btn{flex:1;display:flex;align-items:center;justify-content:center;gap:9px;padding:14px;font-size:14px}
+.foot .btn.ghost{flex:0 0 200px}
+.hint-line{font-size:11.5px;color:var(--ink3);margin-top:11px;line-height:1.6;text-align:center}
+.hint-line span{color:var(--ink2)}
+
+/* ===== 区块标题 ===== */
+.sec-h{display:flex;align-items:baseline;gap:12px;margin:34px 0 15px}
+.sec-h .n{font-family:var(--mono);font-size:12px;color:var(--teal)}
+.sec-h .t{font-size:19px;font-weight:900}
+.sec-h .s{font-size:12.5px;color:var(--ink2)}
+
+/* ===== 你是谁 ===== */
+.castrow{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
+.castcard{border:1px solid var(--line);border-radius:11px;padding:13px 12px;background:linear-gradient(180deg,rgba(22,30,30,.6),rgba(13,18,18,.7));cursor:pointer;transition:.18s}
+.castcard:hover{transform:translateY(-2px);border-color:var(--teal-d)}
+.castcard.me{border-color:var(--teal);box-shadow:0 0 0 1px var(--teal),0 10px 24px rgba(20,180,160,.18)}
+.castcard .face{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;margin-bottom:10px;font-size:15px;font-weight:900}
+.castcard .nm{font-weight:800;font-size:13.5px}
+.castcard .one{font-size:11px;color:var(--ink2);margin-top:5px;line-height:1.55}
+.whobox{display:none;margin-top:14px;border:1px solid var(--teal-d);border-radius:12px;overflow:hidden}
+.whobox.show{display:block}
+.whobox .top{display:flex;align-items:center;gap:13px;padding:15px 18px;background:linear-gradient(90deg,rgba(20,120,110,.18),transparent)}
+.whobox .top .you{font-size:17px;font-weight:900;color:var(--teal)}
+.whobox .top .q{font-size:12.5px;color:var(--ink2)}
+.whogrid{display:grid;grid-template-columns:repeat(4,1fr);gap:0}
+.whogrid .cell{padding:14px 18px;border-top:1px solid var(--line)}
+.whogrid .cell:not(:last-child){border-right:1px solid var(--line)}
+.whogrid .h{font-size:11.5px;color:var(--ink2);margin-bottom:6px}
+.whogrid .v{font-size:14px;font-weight:700;line-height:1.5}
+
+/* ===== 图表墙 ===== */
+.dash{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
+.chart{grid-column:span 4;border:1px solid var(--line);border-radius:12px;padding:16px 17px;
+ background:linear-gradient(180deg,rgba(22,30,30,.66),rgba(13,18,18,.8))}
+.chart.half{grid-column:span 6}.chart.wide{grid-column:span 8}.chart.full{grid-column:span 12}
+.chart .ct{font-weight:800;font-size:14.5px;line-height:1.4}
+.chart .cs{font-size:11.5px;color:var(--ink2);margin:5px 0 14px;line-height:1.55}
+.chart .cs b{color:var(--amber);font-weight:700}
+.kpi3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.kpi3 .k .n{font-size:25px;font-weight:900;font-family:var(--mono);letter-spacing:-.5px}
+.kpi3 .k .l{font-size:11px;color:var(--ink2);margin-top:3px}
+.kpi3 .k .d{font-size:10.5px;margin-top:4px}
+.up{color:var(--teal)}.down{color:var(--red)}.flat{color:var(--amber)}
+.hbar{display:flex;align-items:center;gap:10px;margin:8px 0;font-size:11.5px}
+.hbar .lab{width:74px;color:var(--ink2);text-align:right;flex:0 0 74px}
+.hbar .tr{flex:1;height:9px;border-radius:5px;background:rgba(255,255,255,.06);overflow:hidden}
+.hbar .tr i{display:block;height:100%;border-radius:5px}
+.hbar .val{width:42px;font-family:var(--mono);font-size:11px}
+.legend{display:flex;gap:14px;font-size:10.5px;color:var(--ink2);margin-top:12px;flex-wrap:wrap}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.tagline{display:inline-block;font-family:var(--mono);font-size:10px;color:var(--teal);border:1px solid var(--teal-d);padding:2px 7px;border-radius:5px;margin-bottom:9px}
+
+/* ===== 完整网络全景 + 全网结构统计 ===== */
+.fullpanel{border:1px solid var(--line);border-radius:12px;background:linear-gradient(180deg,rgba(20,27,27,.7),rgba(12,17,17,.85));overflow:hidden;margin-bottom:15px}
+.netwrap{position:relative;height:520px}
+.netwrap svg{width:100%;height:100%;display:block}
+.netctrl{position:absolute;top:12px;right:14px;display:flex;gap:7px;z-index:5}
+.minibtn{font-family:var(--mono);font-size:10.5px;color:var(--ink2);border:1px solid var(--line);background:rgba(10,15,15,.75);padding:5px 10px;border-radius:6px;cursor:pointer}
+.minibtn:hover,.minibtn.on{color:var(--teal);border-color:var(--teal-d)}
+.addform{display:grid;grid-template-columns:repeat(4,1fr) auto;gap:14px;align-items:end;padding:4px 2px}
+.fld{display:flex;flex-direction:column;gap:6px}
+.fld label{font-size:11.5px;color:var(--ink2)}
+.fld input,.fld select{background:#0d1414;border:1px solid var(--line);border-radius:8px;padding:9px 11px;color:var(--ink);font-size:13px;font-family:inherit;outline:none}
+.fld input:focus,.fld select:focus{border-color:var(--teal-d)}
+.fld select option{background:#0d1414}
+.btn-go{background:linear-gradient(160deg,#2dd4bf,#14b8a6);color:#05201d;border:none;border-radius:8px;padding:10px 18px;font-weight:800;font-size:13px;cursor:pointer;white-space:nowrap}
+.btn-go:hover{filter:brightness(1.08)}
+.myread{margin-top:12px;border:1px solid var(--teal-d);border-radius:10px;background:rgba(45,212,191,.07);padding:12px 15px;font-size:13px;line-height:1.7}
+@keyframes mypulse{0%,100%{opacity:1}50%{opacity:.3}}
+.mypulse{animation:mypulse 1.4s infinite}
+.egohint{font-size:11.5px;color:var(--ink2);margin-top:8px}
+.statgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:11px;margin-bottom:14px}
+.statcard{border:1px solid var(--line);border-radius:10px;padding:13px 14px;background:linear-gradient(180deg,rgba(22,30,30,.6),rgba(13,18,18,.75))}
+.statcard .h{font-size:11.5px;color:var(--ink2)}
+.statcard .big{font-size:21px;font-weight:900;font-family:var(--mono);margin:6px 0 2px;letter-spacing:-.5px}
+.statcard .p{font-size:10.5px;color:var(--ink2);line-height:1.5}
+.distpanel{border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:linear-gradient(180deg,rgba(22,30,30,.6),rgba(13,18,18,.75))}
+.distpanel .dt{font-size:13px;font-weight:800;margin-bottom:3px}
+.distpanel .ds{font-size:11px;color:var(--ink2);margin-bottom:12px;line-height:1.5}
+.degrow{display:flex;align-items:flex-end;gap:7px;height:118px;border-bottom:1px solid var(--line);padding:0 4px}
+.degrow .b{flex:1;border-radius:3px 3px 0 0;min-height:3px;position:relative}
+.deglab{display:flex;justify-content:space-between;font-size:10px;color:var(--ink2);margin-top:7px}
+/* 加入企业 + 大小网络 */
+.addform{display:grid;grid-template-columns:repeat(4,1fr) 1fr;gap:11px;align-items:end}
+.addform .fld label{display:block;font-size:11px;color:var(--ink2);margin-bottom:6px}
+.addform .fld input,.addform .fld select{width:100%;background:rgba(8,12,12,.7);border:1px solid var(--line);border-radius:8px;padding:10px 11px;color:var(--ink);font-size:12.5px;font-family:inherit}
+.addform .fld input:focus,.addform .fld select:focus{outline:none;border-color:var(--teal-d)}
+.viewtoggle{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.viewtoggle button{font-family:var(--mono);font-size:11px;padding:7px 14px;background:transparent;color:var(--ink2);border:0;cursor:pointer}
+.viewtoggle button.on{background:var(--teal-d);color:#fff}
+.egowrap{position:relative;height:480px;display:none}
+.egowrap.show{display:block}
+.egowrap svg{width:100%;height:100%}
+</style>
+</head>
+<body>
+<svg class="grain"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2"/></filter>
+<rect width="100%" height="100%" filter="url(#n)"/></svg>
+
+<div class="wrap">
+ <!-- HUD -->
+ <div class="hud">
+  <div class="brand"><span class="logo">
+   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v3M12 18v3M3 12h3M18 12h3" stroke-linecap="round"/><circle cx="12" cy="12" r="4"/></svg>
+  </span>产业决策风洞</div>
+  <div class="hud-right">
+   <div class="chip">当前案例 <b>惠州仲恺高新区</b></div>
+   <div class="chip"><span class="dot"></span>风洞已就绪</div>
+   <button class="btn ghost">换一个园区</button>
+  </div>
+ </div>
+
+ <!-- 步骤 -->
+ <div class="flow">
+  <div class="step done"><span class="no">✓</span>接诊</div><span class="bar"></span>
+  <div class="step done"><span class="no">✓</span>重建世界</div><span class="bar"></span>
+  <div class="step on"><span class="no">03</span>体检诊断</div><span class="bar"></span>
+  <div class="step"><span class="no">04</span>风洞压测</div><span class="bar"></span>
+  <div class="step"><span class="no">05</span>开处方</div>
+ </div>
+
+ <!-- ===== 01 完整网络全景 ===== -->
+ <div class="sec-h"><span class="n">01</span><span class="t">完整网络全景：这张网长好的样子</span>
+  <span class="s">20 个节点、36 条关系全部长齐——世界构建的最终成品，可拖动、缩放、逐个看</span></div>
+ <div class="fullpanel">
+  <div class="head"><div class="h-title"><span class="h-tag">完整产业网络</span><span class="h-sim" style="color:var(--teal)">健康态 · 全节点在线</span></div>
+   <div class="h-actions"><span class="h-btn">20 节点</span><span class="h-btn">36 关系</span></div></div>
+  <div class="netwrap">
+   <div class="netctrl">
+    <button class="minibtn on" id="colorRole" onclick="setFullColor('role')">按角色着色</button>
+    <button class="minibtn" id="colorComm" onclick="setFullColor('comm')">按小圈子着色</button>
+   </div>
+   <svg id="fullnet" viewBox="0 0 1000 520" preserveAspectRatio="xMidYMid meet"></svg>
+  </div>
+ </div>
+
+ <!-- ===== 全网结构描述统计（人话） ===== -->
+ <div class="statgrid">
+  <div class="statcard"><div class="h">网络密度</div><div class="big">0.19</div><div class="p">100 对可能关系只连了约 19 条，网偏松散。</div></div>
+  <div class="statcard"><div class="h">自然小圈子</div><div class="big">6 个</div><div class="p">圈内抱团、圈间靠少数牵线（模块度 0.30）。</div></div>
+  <div class="statcard"><div class="h">平均距离</div><div class="big">2.06 跳</div><div class="p">任意两家平均隔 2 人搭上话，传导很快。</div></div>
+  <div class="statcard"><div class="h">抱团程度</div><div class="big">0.25</div><div class="p">有一定抱团，还不至于拉帮结派。</div></div>
+  <div class="statcard"><div class="h">中心势</div><div class="big" style="color:var(--amber)">0.53</div><div class="p">中等偏集中，华星等少数枢纽分量明显。</div></div>
+  <div class="statcard"><div class="h">孤岛节点</div><div class="big" style="color:var(--red)">1 家</div><div class="p">艾比森谁也不连，最孤立、最边缘。</div></div>
+ </div>
+ <div class="distpanel">
+  <div class="dt">度分布：连接数的"长尾"</div>
+  <div class="ds">大多数家只连一两家，极少数（华星）连着十几家——<b style="color:var(--amber)">典型的"少数扛多数"</b>，这也是风险会集中传导的根源。</div>
+  <div class="degrow" id="degrow"></div>
+  <div class="deglab"><span>连接少 · 边缘配套</span><span>连接多 · 枢纽节点</span></div>
+ </div>
+
+ <div class="grid">
+  <!-- 风洞舞台 -->
+  <div class="panel">
+   <div class="panel-h">
+    <span class="t">风洞舞台</span><span class="tag">SIMULATION</span>
+    <div class="right">
+     <button class="mini on">网络结构</button><button class="mini">小圈子</button><button class="mini">重播</button>
+    </div>
+   </div>
+   <div class="stage" id="stage"></div>
+  </div>
+
+  <!-- 右栏：人话结论 -->
+  <div class="panel side">
+   <div class="panel-h"><span class="t">体检结论 · 说人话</span></div>
+   <div class="verdict">
+    <div class="h"><span class="ic t">柱</span>谁是这张网的顶梁柱</div>
+    <div class="big v-teal">TCL 华星</div>
+    <div class="sub">它一搬走，整张网会散——但它不是唯一的关键。</div>
+   </div>
+   <div class="verdict">
+    <div class="h"><span class="ic a">喉</span>谁卡着上下游的咽喉</div>
+    <div class="big v-amber">电力保障 · 桥接配套</div>
+    <div class="sub">平时最不起眼，一旦停摆全场窒息。</div>
+   </div>
+   <div class="verdict">
+    <div class="h"><span class="ic r">险</span>谁看着稳、其实最先慢性死</div>
+    <div class="big v-red">一家小配套（第 16 个月）</div>
+    <div class="sub">硬撑 15 个月一切正常，第 16 个月突然没了。</div>
+    <div class="barv"><i style="width:82%;background:linear-gradient(90deg,var(--amber),var(--red))"></i></div>
+   </div>
+   <div class="verdict">
+    <div class="h"><span class="ic c">尾</span>最坏会怎样（跑 1000 次）</div>
+    <div class="big v-cyan">十家，活不到三家</div>
+    <div class="sub">这是极端情况下的推演分布，不是预言。</div>
+   </div>
+  </div>
+ </div>
+
+ <!-- ===== 你是谁 ===== -->
+ <div class="sec-h"><span class="n">03</span><span class="t">先找到你自己</span>
+  <span class="s">在这张网里，你是哪种角色？点一张"这是我"，看你该盯什么、怕什么</span></div>
+ <div class="castrow" id="castrow">
+  <div class="castcard" onclick="pickWho('link',this)"><div class="face" style="background:rgba(45,212,191,.16);color:var(--teal)">柱</div><div class="nm">顶梁柱·链主</div><div class="one">牵一发动全身，大家都看着我。</div></div>
+  <div class="castcard" onclick="pickWho('engine',this)"><div class="face" style="background:rgba(56,189,248,.16);color:var(--cyan)">擎</div><div class="nm">增长引擎</div><div class="one">我不靠稳，靠拼命扩张。</div></div>
+  <div class="castcard" onclick="pickWho('old',this)"><div class="face" style="background:rgba(245,181,68,.16);color:var(--amber)">炮</div><div class="nm">转型老炮</div><div class="one">过去的本事，扛不扛得住下一轮？</div></div>
+  <div class="castcard" onclick="pickWho('oem',this)"><div class="face" style="background:rgba(91,155,191,.18);color:#7fb6cf">机</div><div class="nm">整机厂</div><div class="one">我做成品，上下游都得伺候好。</div></div>
+  <div class="castcard me" onclick="pickWho('sup',this)"><div class="face" style="background:rgba(150,160,155,.16);color:#aab4af">配</div><div class="nm">小配套</div><div class="one">我靠订单活，订单一断就悬。</div></div>
+  <div class="castcard" onclick="pickWho('srv',this)"><div class="face" style="background:rgba(176,138,74,.18);color:#c7a06a">服</div><div class="nm">服务商</div><div class="one">看着虚，真少了我还不行。</div></div>
+  <div class="castcard" onclick="pickWho('base',this)"><div class="face" style="background:rgba(240,106,94,.16);color:var(--red)">座</div><div class="nm">沉默底座</div><div class="one">我不吭声，没了我全场停摆。</div></div>
+ </div>
+ <div class="whobox show" id="whobox">
+  <div class="top"><span class="you" id="wyou">你是：小配套</span><span class="q" id="wq">——就是那个硬撑15个月、第16个月可能没了的角色</span></div>
+  <div class="whogrid">
+   <div class="cell"><div class="h">你靠谁活</div><div class="v" id="w1"></div></div>
+   <div class="cell"><div class="h">谁靠你</div><div class="v" id="w2"></div></div>
+   <div class="cell"><div class="h">你最怕什么</div><div class="v" id="w3"></div></div>
+   <div class="cell"><div class="h">你该先做的一件事</div><div class="v" id="w4"></div></div>
+  </div>
+ </div>
+
+ <!-- ===== 加入我的企业 ===== -->
+ <div class="sec-h"><span class="n">03+</span><span class="t">把你的企业，放进这张网</span>
+  <span class="s">填四项，立刻看到你在大网络里的位置，以及你的"小关系圈"长什么样</span></div>
+ <div class="fullpanel">
+  <div class="addform">
+   <div class="fld"><label>企业名称</label><input id="myName" placeholder="如：某某精密"></div>
+   <div class="fld"><label>你是干嘛的</label>
+    <select id="myRole">
+     <option value="sup">给人供货的小配套</option>
+     <option value="oem">做整机 / 模组的</option>
+     <option value="link">链主 / 平台型</option>
+     <option value="engine">高增长新赛道</option>
+     <option value="old">老牌转型企业</option>
+     <option value="srv">生产性服务（物流/检测/软件）</option>
+     <option value="base">基础设施 / 底座</option>
+    </select></div>
+   <div class="fld"><label>最大客户（填网里的，如华星 / 亿纬；也可自定义）</label><input id="myClient" placeholder="如：华星"></div>
+   <div class="fld"><label>现金还能撑几个月</label><input id="myCash" type="number" placeholder="如：8"></div>
+   <button class="btn-go" onclick="addMyFirm()">把我放进网里</button>
+  </div>
+ </div>
+ <div class="fullpanel" id="myPanel" style="display:none">
+  <div class="head"><div class="h-title"><span class="h-tag" id="myTag">我的企业</span><span class="h-sim" id="mySub"></span></div>
+   <div class="h-actions">
+    <button class="minibtn on" id="vtBig" onclick="myView('big')">大网络 · 我的位置</button>
+    <button class="minibtn" id="vtEgo" onclick="myView('ego')">小网络 · 我的关系圈</button>
+   </div></div>
+  <div class="netwrap" style="height:470px">
+   <svg id="bignet" viewBox="0 0 1000 470" preserveAspectRatio="xMidYMid meet"></svg>
+   <svg id="egonet" viewBox="0 0 1000 470" style="display:none" preserveAspectRatio="xMidYMid meet"></svg>
+  </div>
+  <div class="myread" id="myRead"></div>
+ </div>
+
+ <!-- ===== 人话版描述统计：图表墙 ===== -->
+ <div class="sec-h"><span class="n">04</span><span class="t">基本盘体检 · 一张图一句大白话</span>
+  <span class="s">不讲术语，只告诉你：家底多厚、谁强谁弱、钱往哪走、黄灯在哪</span></div>
+ <div class="dash">
+
+  <!-- KPI 基本盘 -->
+  <div class="chart wide">
+   <span class="tagline">REAL · 公开统计</span>
+   <div class="ct">这园区有多大、靠什么吃饭</div>
+   <div class="cs">仲恺家底不薄，<b>电子信息是饭碗</b>：四千多亿规上产值、一千多家高企。下面是 2025 年公开统计。</div>
+   <div class="kpi3" style="margin-bottom:16px">
+    <div class="k"><div class="n">1160.4<span style="font-size:13px"> 亿</span></div><div class="l">GDP</div><div class="d up">↑ 7.1%</div></div>
+    <div class="k"><div class="n">4037.1<span style="font-size:13px"> 亿</span></div><div class="l">规上工业总产值</div><div class="d up">↑ 12.2%</div></div>
+    <div class="k"><div class="n">1053<span style="font-size:13px"> 家</span></div><div class="l">高新技术企业</div><div class="d" style="color:var(--ink2)">规上企业 1144 家</div></div>
+   </div>
+   <div class="kpi3">
+    <div class="k"><div class="n">157.7<span style="font-size:13px"> 亿</span></div><div class="l">税收</div><div class="d up">↑ 8.0%</div></div>
+    <div class="k"><div class="n">102.0<span style="font-size:13px"> 亿度</span></div><div class="l">全社会用电</div><div class="d up">↑ 14.4%</div></div>
+    <div class="k"><div class="n">7.39<span style="font-size:13px"> 亿</span></div><div class="l">实际利用外资</div><div class="d up">↑ 167.6%</div></div>
+   </div>
+  </div>
+
+  <!-- 角色构成环 -->
+  <div class="chart">
+   <div class="ct">20 个关键角色，都是干嘛的</div>
+   <div class="cs">真正的大角色就 3 家，<b>七家是给人配套的小厂</b>。</div>
+   <div style="display:grid;place-items:center;margin:4px 0 6px">
+    <div style="width:148px;height:148px;border-radius:50%;position:relative;
+     background:conic-gradient(var(--teal) 0 5%,var(--cyan) 5% 10%,var(--amber) 10% 15%,#7fb6cf 15% 35%,#9aa49f 35% 70%,#c7a06a 70% 95%,var(--red) 95% 100%)">
+     <div style="position:absolute;inset:34px;border-radius:50%;background:#10151a;display:grid;place-items:center;
+      text-align:center;font-size:11px;color:var(--ink2);line-height:1.5">20 个<br><b style="color:var(--ink)">关键角色</b></div>
+    </div>
+   </div>
+   <div class="legend" style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
+    <span><i style="background:var(--teal)"></i>链主 1</span><span><i style="background:var(--cyan)"></i>引擎 1</span>
+    <span><i style="background:var(--amber)"></i>老炮 1</span><span><i style="background:#7fb6cf"></i>整机 4</span>
+    <span><i style="background:#9aa49f"></i>小配套 7</span><span><i style="background:#c7a06a"></i>服务 5</span>
+    <span><i style="background:var(--red)"></i>底座 1</span>
+   </div>
+  </div>
+
+  <!-- Treemap -->
+  <div class="chart">
+   <div class="ct">产值都在谁手里</div>
+   <div class="cs">智能终端＋能源电子<b>两大集群扛走近半壁江山</b>。</div>
+   <div style="display:flex;gap:6px;height:150px;margin:6px 0 8px">
+    <div style="flex:1.5;border-radius:8px;background:linear-gradient(160deg,#1a8f83,#0f5f57);display:flex;flex-direction:column;justify-content:flex-end;padding:11px">
+     <div style="font-size:17px;font-weight:900;font-family:var(--mono)">1212.8<span style="font-size:10px"> 亿</span></div><div style="font-size:11px;opacity:.9">智能终端集群</div></div>
+    <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+     <div style="flex:1.3;border-radius:8px;background:linear-gradient(160deg,#117a94,#0b5568);display:flex;flex-direction:column;justify-content:flex-end;padding:9px">
+      <div style="font-size:15px;font-weight:900;font-family:var(--mono)">811.6<span style="font-size:10px"> 亿</span></div><div style="font-size:10.5px;opacity:.9">能源电子</div></div>
+     <div style="flex:1;border-radius:8px;background:rgba(255,255,255,.07);display:flex;flex-direction:column;justify-content:flex-end;padding:9px">
+      <div style="font-size:12px;font-weight:700">其他配套</div><div style="font-size:10px;color:var(--ink2)">服务/底座</div></div>
+    </div>
+   </div>
+   <div class="legend"><span>方块越大，产值盘子越重</span></div>
+  </div>
+
+  <!-- 强弱悬殊 -->
+  <div class="chart">
+   <div class="ct">强弱有多悬殊</div>
+   <div class="cs">最忙的华星一家连着 12 家，<b>少数几家扛大半张网</b>。</div>
+   <div class="hbar"><span class="lab">TCL华星</span><span class="tr"><i style="width:100%;background:var(--teal)"></i></span><span class="val">0.68</span></div>
+   <div class="hbar"><span class="lab">电力保障</span><span class="tr"><i style="width:47%;background:var(--red)"></i></span><span class="val">0.32</span></div>
+   <div class="hbar"><span class="lab">德赛西威</span><span class="tr"><i style="width:38%;background:var(--amber)"></i></span><span class="val">0.26</span></div>
+   <div class="hbar"><span class="lab">TCL王牌</span><span class="tr"><i style="width:38%;background:#7fb6cf"></i></span><span class="val">0.26</span></div>
+   <div class="hbar"><span class="lab">亿纬锂能</span><span class="tr"><i style="width:31%;background:var(--cyan)"></i></span><span class="val">0.21</span></div>
+  </div>
+
+  <!-- 逆势扩张 -->
+  <div class="chart">
+   <div class="ct">谁在逆势扩张</div>
+   <div class="cs">别人喊难时，<b>有核心技术的几家在抢份额</b>。</div>
+   <div class="hbar"><span class="lab">实际利用外资</span><span class="tr"><i style="width:100%;background:var(--teal)"></i></span><span class="val up">+168%</span></div>
+   <div class="hbar"><span class="lab">能源电子</span><span class="tr"><i style="width:60%;background:var(--cyan)"></i></span><span class="val up">+18.7%</span></div>
+   <div class="hbar"><span class="lab">全社会用电</span><span class="tr"><i style="width:46%;background:var(--cyan)"></i></span><span class="val up">+14.4%</span></div>
+   <div class="hbar"><span class="lab">规上产值</span><span class="tr"><i style="width:39%;background:var(--teal)"></i></span><span class="val up">+12.2%</span></div>
+   <div class="hbar"><span class="lab">税收</span><span class="tr"><i style="width:26%;background:var(--teal)"></i></span><span class="val up">+8.0%</span></div>
+  </div>
+
+  <!-- 健康雷达 -->
+  <div class="chart half">
+   <div class="ct">日子好不好，拆开看五样</div>
+   <div class="cs">骨架挺结实（存续、抗风险高），但景气、信心只是中等——<b>能过，谈不上好</b>。</div>
+   <svg viewBox="0 0 280 232" style="width:100%;height:200px">
+    <g stroke="rgba(150,190,180,.22)" fill="none">
+     <polygon points="140,34 221,92 190,186 90,186 59,92"/>
+     <polygon points="140,62 194,101 173,163 107,163 86,101"/>
+     <line x1="140" y1="118" x2="140" y2="34"/><line x1="140" y1="118" x2="221" y2="92"/>
+     <line x1="140" y1="118" x2="190" y2="186"/><line x1="140" y1="118" x2="90" y2="186"/>
+     <line x1="140" y1="118" x2="59" y2="92"/>
+    </g>
+    <polygon points="140,72 204,98 185,179 95,179 117,112" fill="rgba(45,212,191,.22)" stroke="var(--teal)" stroke-width="1.6"/>
+    <g font-size="10.5" fill="var(--ink2)" text-anchor="middle">
+     <text x="140" y="24">景气</text><text x="232" y="90">协同</text><text x="200" y="202">抗风险</text>
+     <text x="80" y="202">存续</text><text x="48" y="90">信心</text>
+    </g>
+   </svg>
+  </div>
+
+  <!-- 客户依赖 -->
+  <div class="chart half">
+   <div class="ct">大家都靠谁吃饭</div>
+   <div class="cs">好几家命脉攥在一两个客户手里——<b>最赚钱的时候，也最危险</b>。</div>
+   <div class="hbar"><span class="lab">德赛电池</span><span class="tr"><i style="width:90%;background:var(--red)"></i></span><span class="val down">90%</span></div>
+   <div class="hbar"><span class="lab">锂电材料</span><span class="tr"><i style="width:80%;background:var(--red)"></i></span><span class="val down">80%</span></div>
+   <div class="hbar"><span class="lab">连接器厂</span><span class="tr"><i style="width:80%;background:var(--red)"></i></span><span class="val down">80%</span></div>
+   <div class="hbar"><span class="lab">PCB板厂</span><span class="tr"><i style="width:80%;background:var(--red)"></i></span><span class="val down">80%</span></div>
+   <div class="hbar"><span class="lab">聚飞光电</span><span class="tr"><i style="width:70%;background:var(--amber)"></i></span><span class="val flat">70%</span></div>
+   <div class="hbar"><span class="lab">仲恺B保</span><span class="tr"><i style="width:70%;background:var(--amber)"></i></span><span class="val flat">70%</span></div>
+   <div class="legend"><span><i style="background:var(--red)"></i>单一客户依赖 &gt;75%：抗风险弱</span></div>
+  </div>
+
+  <!-- 钱往哪走 -->
+  <div class="chart half">
+   <div class="ct">钱和人，到底往哪走</div>
+   <div class="cs">产能在涨、用电在增，但投资、技改、基建在缩——<b>增长的"后劲"亮黄灯</b>。</div>
+   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:4px">
+    <div>
+     <div style="font-size:11px;color:var(--teal);margin-bottom:10px;font-weight:700">在往上走</div>
+     <div style="font-size:12px;margin:9px 0">能源电子 <span class="up" style="font-family:var(--mono);float:right">↑ 18.7%</span></div>
+     <div style="font-size:12px;margin:9px 0">全社会用电 <span class="up" style="font-family:var(--mono);float:right">↑ 14.4%</span></div>
+     <div style="font-size:12px;margin:9px 0">规上产值 <span class="up" style="font-family:var(--mono);float:right">↑ 12.2%</span></div>
+    </div>
+    <div>
+     <div style="font-size:11px;color:var(--red);margin-bottom:10px;font-weight:700">在往下掉</div>
+     <div style="font-size:12px;margin:9px 0">基建投资 <span class="down" style="font-family:var(--mono);float:right">↓ 41.2%</span></div>
+     <div style="font-size:12px;margin:9px 0">工业投资 <span class="down" style="font-family:var(--mono);float:right">↓ 23.6%</span></div>
+     <div style="font-size:12px;margin:9px 0">工业技改 <span class="down" style="font-family:var(--mono);float:right">↓ 22.4%</span></div>
+    </div>
+   </div>
+  </div>
+
+  <!-- 跑1000次分布 -->
+  <div class="chart half">
+   <div class="ct">跑 1000 次，结果都落在哪</div>
+   <div class="cs">大多数时候风平浪静，但<b>约一成情况风险明显蹿高</b>——要防那一小撮最坏。</div>
+   <div style="display:flex;align-items:flex-end;gap:5px;height:140px;margin-top:6px;border-bottom:1px solid var(--line)">
+    <div style="flex:1;height:100%;background:var(--teal);border-radius:3px 3px 0 0;opacity:.85"></div>
+    <div style="flex:1;height:92%;background:var(--teal);border-radius:3px 3px 0 0;opacity:.8"></div>
+    <div style="flex:1;height:80%;background:var(--teal);border-radius:3px 3px 0 0;opacity:.72"></div>
+    <div style="flex:1;height:64%;background:var(--teal);border-radius:3px 3px 0 0;opacity:.62"></div>
+    <div style="flex:1;height:48%;background:var(--teal);border-radius:3px 3px 0 0;opacity:.52"></div>
+    <div style="flex:1;height:34%;background:var(--amber);border-radius:3px 3px 0 0;opacity:.7"></div>
+    <div style="flex:1;height:24%;background:var(--amber);border-radius:3px 3px 0 0;opacity:.7"></div>
+    <div style="flex:1;height:17%;background:var(--red);border-radius:3px 3px 0 0;opacity:.8"></div>
+    <div style="flex:1;height:12%;background:var(--red);border-radius:3px 3px 0 0;opacity:.85"></div>
+    <div style="flex:1;height:8%;background:var(--red);border-radius:3px 3px 0 0"></div>
+   </div>
+   <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--ink2);margin-top:7px">
+    <span>多数：风险低（中位数 0.03）</span><span>尾部：P90 ≈ 0.36</span>
+   </div>
+  </div>
+
+ </div>
+
+ <!-- 动作 -->
+ <div class="foot">
+  <button class="btn">把这张网扔进风洞，连撞六次 →</button>
+  <button class="btn ghost">直接看处方</button>
+ </div>
+ <div class="hint-line">看不懂术语没关系，<span>结论已经替你算好</span>。点上面按钮，看它是怎么一步步倒的。</div>
+</div>
+
+<script>
+/* ---------- 数据 ---------- */
+const ROLES=[
+ {id:"hx",name:"TCL华星",role:"link",r:16},{id:"yw",name:"亿纬锂能",role:"engine",r:13},
+ {id:"xw",name:"德赛西威",role:"old",r:11},{id:"dz",name:"TCL电子",role:"oem",r:9},
+ {id:"wp",name:"TCL王牌",role:"oem",r:9},{id:"lq",name:"龙旗科技",role:"oem",r:8},
+ {id:"gh",name:"光弘电子",role:"oem",r:8},{id:"dc",name:"德赛电池",role:"sup",r:8},
+ {id:"jf",name:"聚飞光电",role:"sup",r:8},{id:"ab",name:"艾比森",role:"sup",r:7},
+ {id:"lm",name:"雷曼光电",role:"sup",r:7},{id:"cl",name:"锂电材料厂",role:"sup",r:8},
+ {id:"ljq",name:"连接器厂",role:"sup",r:7},{id:"pcb",name:"PCB板厂",role:"sup",r:7},
+ {id:"bb",name:"仲恺B保",role:"srv",r:8},{id:"jc",name:"检测认证",role:"srv",r:7},
+ {id:"rj",name:"软件信息",role:"srv",r:8},{id:"sl",name:"算力数据中心",role:"srv",r:9},
+ {id:"zf",name:"政府母基金",role:"srv",r:9},{id:"dl",name:"电力保障",role:"base",r:11}
+];
+const EDGES=[
+ ["hx","ljq"],["hx","pcb"],["hx","jf"],["hx","rj"],["hx","jc"],["hx","cl"],["hx","lm"],["hx","dz"],["hx","wp"],["hx","lq"],["hx","gh"],["hx","zf"],
+ ["yw","cl"],["yw","dc"],["yw","zf"],["xw","ljq"],["xw","pcb"],["xw","rj"],["xw","jc"],
+ ["dz","jf"],["dz","wp"],["wp","jf"],["lq","jf"],["gh","pcb"],
+ ["bb","dz"],["bb","wp"],["bb","lq"],["sl","rj"],["zf","yw"],["zf","xw"],
+ ["dl","hx"],["dl","yw"],["dl","sl"],["dl","gh"],["dl","dc"],["dl","wp"]
+];
+const DEAD=new Set(["bb","cl","jc","jf","rj","sl"]),WARN=new Set(["dc"]);
+const byId=id=>ROLES.find(r=>r.id===id);
+
+/* ---------- 确定性 FR 布局 ---------- */
+function rng(s){return function(){s|=0;s=s+Math.imul(s^s>>>7,61|s)^s;
+ s=Math.imul(s^s>>>9,61|s)^s;return((s^s>>>14)>>>0)/4294967296}}
+const R=rng(20251005);
+const VW=1000,VH=600,POS={};
+(function(){
+ const n=ROLES.length,k=Math.sqrt(VW*VH/n);
+ const ns=ROLES.map((z,i)=>{const a=i/n*Math.PI*2,rad=60+R()*160;
+  return{id:z.id,x:VW/2+Math.cos(a)*rad,y:VH/2+Math.sin(a)*rad*.9,dx:0,dy:0}});
+ const M=Object.fromEntries(ns.map(z=>[z.id,z]));let temp=VW/10;
+ for(let it=0;it<380;it++){
+  for(let i=0;i<n;i++)for(let j=i+1;j<n;j++){
+   let a=ns[i],b=ns[j],dx=a.x-b.x,dy=a.y-b.y,d=Math.hypot(dx,dy)||1,f=k*k/d;
+   a.dx+=dx/d*f;a.dy+=dy/d*f;b.dx-=dx/d*f;b.dy-=dy/d*f;}
+  EDGES.forEach(([u,v])=>{let a=M[u],b=M[v],dx=a.x-b.x,dy=a.y-b.y,d=Math.hypot(dx,dy)||1,f=d*d/k;
+   a.dx-=dx/d*f;a.dy-=dy/d*f;b.dx+=dx/d*f;b.dy+=dy/d*f;});
+  ns.forEach(z=>{z.dx+=(VW/2-z.x)*.012;z.dy+=(VH/2-z.y)*.012;
+   const d=Math.hypot(z.dx,z.dy)||1,s=Math.min(d,temp);
+   z.x+=z.dx/d*s;z.y+=z.dy/d*s;z.dx=z.dy=0;
+   z.x=Math.max(45,Math.min(VW-45,z.x));z.y=Math.max(40,Math.min(VH-40,z.y));});
+  temp=Math.max(.6,temp*.93);}
+ ns.forEach(z=>POS[z.id]={x:z.x,y:z.y});
+})();
+
+/* ---------- 渲染舞台 ---------- */
+function fill(id){const r=byId(id);
+ if(DEAD.has(id))return "#2a1816";
+ if(id==="hx")return "#14b8a6";if(id==="yw")return "#0e94b8";if(id==="xw")return "#c98a2e";
+ if(id==="dl")return "#b8453c";if(WARN.has(id))return "#8a6a2a";
+ return "#5d7d76";}
+function stroke(id){
+ if(DEAD.has(id))return "#f06a5e";if(WARN.has(id))return "#f5b544";
+ if(id==="hx")return "#2dd4bf";if(id==="yw")return "#38bdf8";if(id==="dl")return "#f06a5e";
+ return "#7fa39c";}
+(function(){
+ const stage=document.getElementById("stage");
+ /* 风洞气流流线 */
+ let flow="";
+ for(let i=0;i<9;i++){const y=40+i*64+R()*18;
+  let d=`M -30 ${y}`;for(let x=0;x<=1040;x+=130){d+=` C ${x+40} ${y-22+R()*44}, ${x+90} ${y-22+R()*44}, ${x+130} ${y-14+R()*28}`}
+  const deadZone=DEAD.size;flow+=`<path class="fline" d="${d}" stroke="rgba(45,212,191,.32)"/>`;}
+ /* 边 */
+ let edges=EDGES.map(([u,v])=>{const a=POS[u],b=POS[v],dead=DEAD.has(u)&&DEAD.has(v);
+  return `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="${dead?"rgba(240,106,94,.25)":"rgba(150,190,180,.22)"}" stroke-width="1.1"/>`}).join("");
+ /* 节点 */
+ let nodes=ROLES.map(z=>{const p=POS[z.id],dead=DEAD.has(z.id),warn=WARN.has(z.id);
+  const cls="fnode"+(dead?" dead":"")+(warn?" warn":"");
+  let s=`<g class="${cls}" transform="translate(${p.x},${p.y})">
+   <circle class="halo" r="${z.r+5}" stroke="${stroke(z.id)}"/>
+   <circle r="${z.r}" fill="${fill(z.id)}" stroke="${stroke(z.id)}" stroke-width="1.4"/>`;
+  if(dead)s+=`<path class="cross" d="M ${-z.r*.6} ${-z.r*.6} L ${z.r*.6} ${z.r*.6} M ${z.r*.6} ${-z.r*.6} L ${-z.r*.6} ${z.r*.6}"/>`;
+  s+=`<text y="${z.r+14}">${z.name}</text></g>`;return s;}).join("");
+ stage.innerHTML=
+  `<svg viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid meet">
+    <g>${flow}</g><g>${edges}</g><g>${nodes}</g>
+   </svg>`;
+ /* 仪器读数 */
+ const read=document.createElement("div");
+ read.style.cssText="position:absolute;left:14px;top:12px;font-family:var(--mono);font-size:10.5px;color:var(--ink2);line-height:1.8";
+ read.innerHTML=`风洞参数<br>气流速度 <span style="color:var(--teal)">M 0.62</span><br>压力 <span style="color:var(--teal)">0.41</span><br>已退出 <span style="color:var(--red)">6 / 20</span>`;
+ stage.appendChild(read);
+ /* 漫画对话框：指向 dc */
+ const p=POS["dc"];
+ const sp=document.createElement("div");
+ const leftSide=p.x>560;
+ sp.className="speech "+(leftSide?"bl":"br")+(WARN.has("dc")?"":" g");
+ sp.style.cssText+=`top:${Math.max(2,p.y/600*100-26)}%;left:${leftSide?Math.max(1,p.x/10-23):p.x/10+2}%`;
+ sp.innerHTML=`硬撑 <b>15 个月</b>，一切正常。<br>第 <b>16 个月</b>，没了。<span class="src">来源：链主外迁情景 · 模型设定，非现实企业</span>`;
+ stage.appendChild(sp);
+})();
+
+/* ---------- 完整网络全景（健康态·FR） ---------- */
+(function(){
+ const svg=document.getElementById("fullnet"),W=1000,H=520,NS="http://www.w3.org/2000/svg";
+ const ADJ={};ROLES.forEach(r=>ADJ[r.id]=new Set());
+ EDGES.forEach(([a,b])=>{ADJ[a].add(b);ADJ[b].add(a)});
+ // 单层贪心模块度社群（确定性）
+ function communities(){
+  const ids=ROLES.map(r=>r.id),deg={};ids.forEach(i=>deg[i]=ADJ[i].size);
+  const M2=ids.reduce((s,i)=>s+deg[i],0)||1;
+  let comm={},tot={};ids.forEach((i,idx)=>{comm[i]=idx;tot[idx]=deg[i]});
+  let improved=true,guard=0;
+  while(improved&&guard++<40){improved=false;
+   ids.forEach(i=>{const ci=comm[i],ncs=[...new Set([...ADJ[i]].map(j=>comm[j]))];
+    tot[ci]-=deg[i];comm[i]=-1;let best=ci,bestG=0;
+    ncs.forEach(c=>{const ki=[...ADJ[i]].filter(j=>comm[j]===c).length;
+     const g=ki/M2-tot[c]*deg[i]/(M2*M2);if(g>bestG+1e-10){bestG=g;best=c}});
+    comm[i]=best;tot[best]+=deg[i];if(best!==ci)improved=true;});}
+  const remap={};let ni=0;ids.forEach(i=>{if(!(comm[i] in remap))remap[comm[i]]=ni++});
+  const C={};ids.forEach(i=>C[i]=remap[comm[i]]);return C;
+ }
+ const C=communities();
+ const ROLE_COLOR={link:'#2dd4bf',engine:'#38bdf8',old:'#f5b544',oem:'#7fb6cf',sup:'#9aa49f',srv:'#c7a06a',base:'#f06a5e'};
+ const COMM_COLORS=['#0f766e','#0891b2','#d97706','#2563a8','#dc2626','#16a34a','#b45309','#0d9488'];
+ // FR 位移式
+ function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+ const rr=rng(777),pos={};
+ ROLES.forEach(s=>pos[s.id]={x:130+rr()*(W-260),y:80+rr()*(H-170)});
+ const k=Math.sqrt(W*H/ROLES.length);
+ for(let it=0;it<360;it++){
+  const t=Math.max(.6,100*Math.pow(.93,it)),disp={};
+  ROLES.forEach(s=>disp[s.id]={x:0,y:0});
+  ROLES.forEach((a,i)=>{for(let j=i+1;j<ROLES.length;j++){const b=ROLES[j];
+   let dx=pos[a.id].x-pos[b.id].x,dy=pos[a.id].y-pos[b.id].y,d=Math.sqrt(dx*dx+dy*dy)||.01;
+   if(d>1300)continue;let f=k*k/d,ux=dx/d,uy=dy/d;
+   disp[a.id].x+=ux*f;disp[a.id].y+=uy*f;disp[b.id].x-=ux*f;disp[b.id].y-=uy*f;}});
+  EDGES.forEach(([a,b])=>{let dx=pos[b].x-pos[a].x,dy=pos[b].y-pos[a].y,d=Math.sqrt(dx*dx+dy*dy)||.01;
+   let f=d*d/k,ux=dx/d,uy=dy/d;disp[a].x+=ux*f;disp[a].y+=uy*f;disp[b].x-=ux*f;disp[b].y-=uy*f;});
+  ROLES.forEach(s=>{disp[s.id].x+=(W/2-pos[s.id].x)*.012;disp[s.id].y+=(H/2-pos[s.id].y)*.012;
+   let dx=disp[s.id].x,dy=disp[s.id].y,d=Math.sqrt(dx*dx+dy*dy)||1,m=Math.min(t,d);
+   pos[s.id].x+=dx/d*m;pos[s.id].y+=dy/d*m;
+   pos[s.id].x=Math.max(45,Math.min(W-45,pos[s.id].x));pos[s.id].y=Math.max(55,Math.min(H-45,pos[s.id].y));});
+ }
+ function el(t,a){const e=document.createElementNS(NS,t);for(const x in a)e.setAttribute(x,a[x]);return e}
+ const eg=el('g'),ng=el('g');svg.appendChild(eg);svg.appendChild(ng);
+ let mode='role';
+ function draw(){
+  eg.innerHTML='';ng.innerHTML='';
+  EDGES.forEach(([a,b])=>{const same=C[a]===C[b];
+   const col=mode==='comm'?(same?COMM_COLORS[C[a]%8]:'rgba(120,140,135,.13)'):'rgba(120,160,150,.22)';
+   eg.appendChild(el('line',{x1:pos[a].x,y1:pos[a].y,x2:pos[b].x,y2:pos[b].y,stroke:col,'stroke-width':mode==='comm'&&same?1.5:1}));});
+  ROLES.forEach(s=>{const col=mode==='comm'?COMM_COLORS[C[s.id]%8]:ROLE_COLOR[s.role];
+   const g=el('g');
+   const c=el('circle',{cx:pos[s.id].x,cy:pos[s.id].y,r:s.r*1.05,fill:'#0d1414',stroke:col,'stroke-width':2.4});g.appendChild(c);
+   const tx=el('text',{x:pos[s.id].x,y:pos[s.id].y+s.r*1.05+13,'text-anchor':'middle','font-size':10.5,fill:'rgba(220,230,226,.85)'});tx.textContent=s.name;g.appendChild(tx);
+   g.style.cursor='pointer';
+   g.addEventListener('mouseenter',()=>c.setAttribute('stroke-width',4));
+   g.addEventListener('mouseleave',()=>c.setAttribute('stroke-width',2.4));
+   ng.appendChild(g);});
+ }
+ draw();
+ window.setFullColor=m=>{mode=m;document.getElementById('colorRole').classList.toggle('on',m==='role');
+  document.getElementById('colorComm').classList.toggle('on',m==='comm');draw();};
+ // 度分布长尾
+ const deg={};ROLES.forEach(s=>deg[s.id]=ADJ[s.id].size);
+ const buckets={'0':0,'1':0,'2':0,'3':0,'4':0,'5':0,'6':0,'7+':0};
+ Object.values(deg).forEach(v=>buckets[v>=7?'7+':String(v)]++);
+ const maxc=Math.max(...Object.values(buckets)),wrap=document.getElementById('degrow');
+ Object.entries(buckets).forEach(([lab,c])=>{if(!c)return;const b=document.createElement('div');b.className='b';
+  b.style.height=Math.max(4,c/maxc*100)+'%';
+  b.style.background=lab==='7+'?'linear-gradient(#d97706,#b45309)':'linear-gradient(#2dd4bf,#0f766e)';
+  b.innerHTML=`<span style="position:absolute;top:-15px;left:0;right:0;text-align:center;font-size:10px;color:var(--ink)">${c}</span>`;
+  b.title='连接 '+lab+' : '+c+' 家';wrap.appendChild(b);});
+ window.FULLPOS=pos;window.FULLC=C;window.FULLADJ=ADJ;
+})();
+
+/* ---------- 你是谁：七种角色档案（人话） ---------- */
+const WHO={
+ link:{name:"顶梁柱·链主（如华星）",q:"你是网络的骨架，你一动，全网跟着晃",
+  w1:"面板/芯片等上游＋全球订单；相对独立、议价强",
+  w2:"<b class='v-teal'>12 家</b>直连配套：连接器、PCB、软件、检测……一大片",
+  w3:"订单或技术路线突变、外迁引发的连锁、政策转向",
+  w4:"稳预期——先把核心配套的长期订单和本地协同钉死，别让人心散"},
+ engine:{name:"增长引擎（如亿纬）",q:"你是扩张的发动机，高增长也高波动",
+  w1:"上游材料＋储能/动力电池的爆发需求",
+  w2:"锂电材料、德赛电池、政府基金等",
+  w3:"扩张过猛撞上价格战、产能过剩、资金链绷紧",
+  w4:"压一条现金安全线，别让扩张速度跑赢回款速度"},
+ old:{name:"转型老炮（如德赛西威）",q:"你的老本事，要在下一轮周期重新证明",
+  w1:"连接器/PCB/软件配套＋车厂新订单（座舱智能化）",
+  w2:"连接器、PCB、软件、检测等",
+  w3:"技术迭代没跟上、被新势力绕过去",
+  w4:"把研发和新客户卡位押在增长曲线上，别守旧饭碗"},
+ oem:{name:"整机厂（TCL电子/王牌/龙旗/光弘）",q:"你做成品，被上下游两头夹，最考验协同",
+  w1:"面板（华星）、芯片、品牌或代工订单",
+  w2:"显示/光电配套、物流 B 保",
+  w3:"<b class='v-amber'>芯片断供、面板涨价、订单外流</b>",
+  w4:"关键料（芯片/面板）备第二、第三供应，别单点卡脖子"},
+ sup:{name:"小配套（如德赛电池）",q:"就是那个硬撑 15 个月、第 16 个月可能没了的角色",
+  w1:"一两个大客户的订单，客户依赖高达 <b class='v-red'>80–90%</b>",
+  w2:"少数下游，可替代性强",
+  w3:"大客户不续约或链主外迁，订单一断现金很快见底",
+  w4:"<b class='v-red'>立刻拓第二、第三个客户</b>，回去算最大客户没了能撑几个月"},
+ srv:{name:"服务商（B保/检测/软件/算力/基金）",q:"你看着“虚”，却是网络运转的润滑剂和供血者",
+  w1:"园区企业的服务采购、项目与政府需求",
+  w2:"依赖物流、检测、算力、资金的众多企业",
+  w3:"企业景气下行，服务预算先被砍、项目断流",
+  w4:"绑定长期、多客户合同，别让收入随单一项目大起大落"},
+ base:{name:"沉默底座（电力保障）",q:"你不吭声，但你是全场能不能喘气的前提",
+  w1:"能源供给与保障体系",
+  w2:"<b class='v-red'>所有企业</b>——华星、亿纬、算力、电池全靠你",
+  w3:"大面积缺电、限电，全场开工率骤降",
+  w4:"保关键枢纽的供电优先级，备好自备、错峰预案"}
+};
+function pickWho(k,el){
+ document.querySelectorAll(".castcard").forEach(c=>c.classList.remove("me"));
+ if(el)el.classList.add("me");
+ const d=WHO[k],$=id=>document.getElementById(id);
+ $("wyou").textContent="你是："+d.name;$("wq").textContent="——"+d.q;
+ $("w1").innerHTML=d.w1;$("w2").innerHTML=d.w2;$("w3").innerHTML=d.w3;$("w4").innerHTML=d.w4;
+ $("whobox").classList.add("show");
+}
+pickWho("sup",document.querySelector(".castcard.me"));
+
+/* ---------- 加入我的企业：大网络定位 + ego 小网络 ---------- */
+const NS="http://www.w3.org/2000/svg";
+function sv(t,a){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e}
+const ROLEC={link:'#2dd4bf',engine:'#38bdf8',old:'#f5b544',oem:'#7fb6cf',sup:'#9aa49f',srv:'#c7a06a',base:'#f06a5e'};
+let MY=null;
+function addMyFirm(){
+ const name=document.getElementById("myName").value.trim()||"我的企业";
+ const role=document.getElementById("myRole").value;
+ const ct=document.getElementById("myClient").value.trim();
+ const cash=Math.max(1,parseInt(document.getElementById("myCash").value)||6);
+ let clientId=null;
+ if(ct){const hit=ROLES.find(r=>r.name.includes(ct)||ct.includes(r.name));if(hit)clientId=hit.id;}
+ MY={name,role,ct,clientId,cash};
+ document.getElementById("myPanel").style.display="";
+ document.getElementById("myTag").textContent=name;
+ document.getElementById("mySub").textContent="现金可撑 "+cash+" 个月";
+ drawBig();drawEgo();readMy();myView("big");
+ setTimeout(()=>document.getElementById("myPanel").scrollIntoView({behavior:"smooth",block:"start"}),120);
+}
+function myView(v){
+ document.getElementById("bignet").style.display=v==="big"?"":"none";
+ document.getElementById("egonet").style.display=v==="ego"?"":"none";
+ document.getElementById("vtBig").classList.toggle("on",v==="big");
+ document.getElementById("vtEgo").classList.toggle("on",v==="ego");
+}
+function drawBig(){
+ const g=document.getElementById("bignet");g.innerHTML="";
+ const pos=window.FULLPOS,eg=sv("g"),ng=sv("g");g.appendChild(eg);g.appendChild(ng);
+ const Y=y=>y*470/520;
+ EDGES.forEach(([a,b])=>eg.appendChild(sv("line",{x1:pos[a].x,y1:Y(pos[a].y),x2:pos[b].x,y2:Y(pos[b].y),stroke:"rgba(130,150,145,.16)","stroke-width":1})));
+ ROLES.forEach(s=>{const p=pos[s.id];
+  ng.appendChild(sv("circle",{cx:p.x,cy:Y(p.y),r:s.r*.9,fill:"#0d1414",stroke:"rgba(150,165,158,.4)","stroke-width":1.4}));
+  const t=sv("text",{x:p.x,y:Y(p.y)+s.r*.9+12,"text-anchor":"middle","font-size":10,fill:"rgba(180,190,185,.5)"});t.textContent=s.name;ng.appendChild(t);});
+ let mp;
+ if(MY.clientId){const cp=pos[MY.clientId];mp={x:cp.x+72,y:Y(cp.y)+62};
+  eg.appendChild(sv("line",{x1:mp.x,y1:mp.y,x2:cp.x,y2:Y(cp.y),stroke:"#2dd4bf","stroke-width":2.4}));}
+ else mp={x:870,y:235};
+ if(MY.ct&&!MY.clientId){const cp={x:mp.x-95,y:mp.y-70};
+  eg.appendChild(sv("line",{x1:mp.x,y1:mp.y,x2:cp.x,y2:cp.y,stroke:"#2dd4bf","stroke-width":2,"stroke-dasharray":"5 4"}));
+  ng.appendChild(sv("circle",{cx:cp.x,cy:cp.y,r:11,fill:"#0d1414",stroke:"#f5b544","stroke-width":1.6,"stroke-dasharray":"3 3"}));
+  const t=sv("text",{x:cp.x,y:cp.y+26,"text-anchor":"middle","font-size":10.5,fill:"#f5b544"});t.textContent=MY.ct;ng.appendChild(t);}
+ ng.appendChild(sv("circle",{cx:mp.x,cy:mp.y,r:17,fill:"none",stroke:"#2dd4bf","stroke-width":1.6,class:"mypulse"}));
+ ng.appendChild(sv("circle",{cx:mp.x,cy:mp.y,r:12,fill:"rgba(45,212,191,.25)",stroke:"#2dd4bf","stroke-width":2.6}));
+ const t=sv("text",{x:mp.x,y:mp.y+30,"text-anchor":"middle","font-size":12,"font-weight":700,fill:"#2dd4bf"});t.textContent=MY.name;ng.appendChild(t);
+}
+function drawEgo(){
+ const g=document.getElementById("egonet");g.innerHTML="";
+ const cx=500,cy=262,eg=sv("g"),ng=sv("g");g.appendChild(eg);g.appendChild(ng);
+ if(!MY.ct){
+  ng.appendChild(sv("circle",{cx,cy,r:15,fill:"rgba(240,106,94,.2)",stroke:"#f06a5e","stroke-width":2.6}));
+  const t=sv("text",{x:cx,y:cy+4,"text-anchor":"middle","font-size":12,"font-weight":700,fill:"#f06a5e"});t.textContent=MY.name;ng.appendChild(t);
+  const w=sv("text",{x:cx,y:cy+72,"text-anchor":"middle","font-size":13,fill:"rgba(200,210,205,.8)"});w.textContent="你还没填大客户——订单结构不清晰，这本身就是头号风险";ng.appendChild(w);return;}
+ const Cp={x:cx,y:128};let clientName="";
+ if(MY.clientId){
+  const s=ROLES.find(r=>r.id===MY.clientId),col=ROLEC[s.role];clientName=s.name;
+  const nbr=[...window.FULLADJ[MY.clientId]],y0=66,x0=125,x1=875;
+  nbr.forEach((nid,i)=>{const nx=nbr.length===1?cx:x0+(x1-x0)*i/(nbr.length-1),ny=y0,ns=ROLES.find(r=>r.id===nid);
+   eg.appendChild(sv("line",{x1:Cp.x,y1:Cp.y,x2:nx,y2:ny,stroke:"rgba(140,160,155,.2)","stroke-width":1}));
+   ng.appendChild(sv("circle",{cx:nx,cy:ny,r:7,fill:"#0d1414",stroke:"rgba(150,165,158,.45)","stroke-width":1.2}));
+   const t=sv("text",{x:nx,y:ny-12,"text-anchor":"middle","font-size":9,fill:"rgba(185,195,190,.62)"});t.textContent=ns.name;ng.appendChild(t);});
+  ng.appendChild(sv("circle",{cx:Cp.x,cy:Cp.y,r:15,fill:"#0d1414",stroke:col,"stroke-width":2.6}));
+  const ct2=sv("text",{x:Cp.x,y:Cp.y+4,"text-anchor":"middle","font-size":10.5,"font-weight":700,fill:col});ct2.textContent=s.name;ng.appendChild(ct2);
+ }else{
+  clientName=MY.ct;
+  ng.appendChild(sv("circle",{cx:Cp.x,cy:Cp.y,r:14,fill:"#0d1414",stroke:"#f5b544","stroke-width":2,"stroke-dasharray":"4 3"}));
+  const ct2=sv("text",{x:Cp.x,y:Cp.y+4,"text-anchor":"middle","font-size":10.5,"font-weight":700,fill:"#f5b544"});ct2.textContent=MY.ct;ng.appendChild(ct2);
+ }
+ eg.appendChild(sv("line",{x1:cx,y1:cy-15,x2:Cp.x,y2:Cp.y+15,stroke:"#2dd4bf","stroke-width":2.6}));
+ const lab=sv("text",{x:cx+12,y:(cy+Cp.y)/2,"font-size":10.5,fill:"#2dd4bf"});lab.textContent="我供货给";ng.appendChild(lab);
+ ng.appendChild(sv("circle",{cx,cy,r:15,fill:"rgba(45,212,191,.22)",stroke:"#2dd4bf","stroke-width":2.8}));
+ const mt=sv("text",{x:cx,y:cy+4,"text-anchor":"middle","font-size":11,"font-weight":800,fill:"#2dd4bf"});mt.textContent=MY.name;ng.appendChild(mt);
+ const h=sv("text",{x:cx,y:448,"text-anchor":"middle","font-size":11.5,fill:"rgba(185,195,190,.72)"});
+ h.textContent=MY.clientId?`最上方是大客户「${clientName}」的其他合作方——他们都是和你共享同一个客户的同行`:"你的客户不在这张网的核心圈";ng.appendChild(h);
+}
+function readMy(){
+ const cash=MY.cash;let risk,month;
+ if(cash<=3){risk="很高";month="你大概已经在第 13 个月以后，离退出只剩最后几步。";}
+ else if(cash<=6){risk="偏高";month="你可能在第 9–12 个月，缓冲只够撑过一轮订单波动。";}
+ else if(cash<=10){risk="中等";month="你大概在第 5–8 个月，还有时间，但要立刻动手。";}
+ else{risk="相对低";month="你还在前 5 个月，缓冲较厚，是布局的最好时机。";}
+ const a=[];
+ if(MY.clientId){const s=ROLES.find(r=>r.id===MY.clientId),shared=window.FULLADJ[MY.clientId].size;
+  a.push(`你把订单押在「${s.name}」一家身上，而它同时连着 ${shared} 个合作方——你并非不可替代，链主一旦外迁，你就是那个“第 16 个月”。`);}
+ else if(MY.ct){a.push(`你的大客户「${MY.ct}」不在这张网的核心圈，订单来源本身偏边缘，更要尽快再开一两个客户。`);}
+ else{a.push("你还没明确大客户——先回答“谁给我订单”，再谈别的。");}
+ a.push("这个月就去谈第二、第三个客户，把单一客户占比降到六成以下，别等订单断了才找下家。");
+ document.getElementById("myRead").innerHTML=
+  `<b style="color:${cash<=6?'var(--red)':'var(--amber)'}">综合判断：风险${risk}。</b>${month}<br><br>${a.map(x=>"· "+x).join("<br>")}`;
+}
+</script>
+</body>
+</html>
